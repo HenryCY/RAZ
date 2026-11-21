@@ -1,0 +1,2110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <!-- iPad Safari PWA 原生全屏配置 -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="RAZ单词Pro" />
+  <meta name="theme-color" content="#FAF7F2" />
+  <title>RAZ 实景单词大冒险 Pro · iPad 离线千词版</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'sans-serif'] },
+          colors: { cream: '#FAF7F2', coral: '#FF6B57', amberpop: '#FFB800' }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+    body {
+      background: #FAF7F2;
+      color: #1E293B;
+      overscroll-behavior-y: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    input, textarea, select { user-select: text; -webkit-user-select: text; }
+
+    .btn-3d { transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s ease; }
+    .btn-3d:active:not(:disabled) { transform: translateY(2px) scale(0.98); }
+
+    @keyframes pulseRing {
+      0% { transform: scale(0.92); opacity: 0.75; }
+      75%, 100% { transform: scale(1.38); opacity: 0; }
+    }
+    .mic-pulse::before {
+      content: ''; position: absolute; inset: -8px; border-radius: 9999px;
+      background: rgba(255, 107, 87, 0.45);
+      animation: pulseRing 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+      pointer-events: none;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px) rotate(-1deg); }
+      40% { transform: translateX(8px) rotate(1deg); }
+      60% { transform: translateX(-5px); }
+      80% { transform: translateX(5px); }
+    }
+    .animate-shake { animation: shake 0.4s ease-in-out; }
+
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.96) translateY(6px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .animate-pop { animation: popIn 0.22s ease-out forwards; }
+
+    @keyframes shimmer {
+      0% { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+    .photo-skeleton {
+      background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
+      background-size: 800px 100%;
+      animation: shimmer 1.3s infinite linear;
+    }
+
+    .fever-glow { box-shadow: 0 0 0 3px rgba(255, 184, 0, 0.55), 0 12px 28px -6px rgba(255, 107, 87, 0.3); }
+    .rotate-180-player { transform: rotate(180deg); }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- 礼花彩带 Canvas -->
+  <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-50 w-full h-full"></canvas>
+
+  <!-- Toast 轻提示容器 -->
+  <div id="toast-container" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-center pointer-events-none w-[90%] max-w-md"></div>
+
+  <!-- 启动加载遮罩 -->
+  <div id="boot-overlay" class="fixed inset-0 z-50 bg-cream/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+    <div class="w-16 h-16 rounded-3xl bg-gradient-to-br from-orange-400 to-rose-500 text-white font-black text-2xl flex items-center justify-center shadow-lg mb-4 animate-bounce">PRO</div>
+    <h2 class="text-xl font-black text-slate-800 mb-1">正在初始化 IndexedDB 离线词库引擎...</h2>
+    <p id="boot-status" class="text-sm text-slate-500 font-semibold">写入 aa–C 1,000 核心词（含音标）与 D–Z 全 27 关</p>
+  </div>
+
+  <!-- 艾宾浩斯闹钟响铃弹窗 -->
+  <div id="alarm-modal" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-7 text-center shadow-2xl border-4 border-amber-400 animate-pop">
+      <div class="w-20 h-20 mx-auto rounded-full bg-amber-100 text-amber-500 flex items-center justify-center mb-3 text-4xl animate-bounce">⏰</div>
+      <div class="inline-block px-3 py-1 rounded-full bg-rose-100 text-rose-600 font-black text-xs mb-2">艾宾浩斯黄金抗遗忘窗口</div>
+      <h3 class="text-2xl font-black text-slate-800 mb-2">每日背单词时间到啦！</h3>
+      <p id="alarm-modal-desc" class="text-sm text-slate-600 font-medium mb-6">花 3 分钟复习今日到期单词，牢记更长久！</p>
+      <div class="flex gap-3">
+        <button onclick="closeModal('alarm-modal')" class="btn-3d flex-1 min-h-[52px] rounded-2xl bg-slate-100 text-slate-600 font-extrabold text-sm">稍后再说</button>
+        <button onclick="closeModal('alarm-modal'); openSrsView(); startSrsReviewSession(false);" class="btn-3d flex-1 min-h-[52px] rounded-2xl bg-gradient-to-r from-amber-400 to-coral text-white font-black text-sm shadow-lg">立刻复习 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 顶部 HUD 导航栏 ==================== -->
+  <header id="main-header" class="sticky top-0 z-30 bg-white/92 backdrop-blur-md border-b border-amber-100 shadow-sm">
+    <div class="max-w-7xl mx-auto px-3 sm:px-5 h-16 flex items-center justify-between gap-2">
+      <!-- Logo & 总词量 -->
+      <div class="flex items-center gap-2.5 cursor-pointer shrink-0" onclick="goHomeMap()">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center text-white font-black text-sm shadow-md">PRO</div>
+        <div class="leading-tight hidden md:block">
+          <h1 class="font-extrabold text-slate-800 text-sm lg:text-base">RAZ 实景单词大冒险</h1>
+          <div class="flex items-center gap-2 text-[11px] font-bold">
+            <span id="hud-total-words" class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">总词库: 0</span>
+            <span id="hud-stars" class="text-amber-600 font-black">★ 0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 主导航按钮 -->
+      <nav class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+        <button id="nav-map" onclick="goHomeMap()" class="btn-3d px-3 sm:px-3.5 py-2 rounded-2xl bg-amber-50 text-amber-800 border border-amber-200 font-extrabold text-xs sm:text-sm flex items-center gap-1 shrink-0">
+          <span>🗺️</span><span>冒险地图</span>
+        </button>
+        <button id="nav-pk" onclick="openPkSetupView()" class="btn-3d px-3 sm:px-3.5 py-2 rounded-2xl bg-rose-50 text-rose-700 border border-rose-200 font-extrabold text-xs sm:text-sm flex items-center gap-1 shrink-0">
+          <span>⚔️</span><span>双人 PK</span>
+        </button>
+        <button id="nav-srs" onclick="openSrsView()" class="btn-3d relative px-3 sm:px-3.5 py-2 rounded-2xl bg-indigo-50 text-indigo-700 border border-indigo-200 font-extrabold text-xs sm:text-sm flex items-center gap-1 shrink-0">
+          <span>🧠</span><span>艾宾浩斯复习</span>
+          <span id="hud-srs-badge" class="hidden -top-1.5 -right-1.5 absolute min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-black flex items-center justify-center shadow">0</span>
+        </button>
+        <button id="nav-album" onclick="openAlbumView()" class="btn-3d px-3 sm:px-3.5 py-2 rounded-2xl bg-sky-50 text-sky-700 border border-sky-200 font-extrabold text-xs sm:text-sm flex items-center gap-1 shrink-0">
+          <span>📸</span><span>实景图鉴</span>
+        </button>
+        <button id="nav-import" onclick="openImportModal()" class="btn-3d px-3 sm:px-3.5 py-2 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-extrabold text-xs sm:text-sm flex items-center gap-1 shrink-0">
+          <span>📚</span><span>词库管理/导入</span>
+        </button>
+      </nav>
+
+      <!-- 右侧家长模式 & 音效 -->
+      <div class="flex items-center gap-1.5 shrink-0">
+        <label class="hidden sm:flex items-center gap-1.5 px-2.5 py-2 rounded-2xl bg-slate-100 border border-slate-200 cursor-pointer" title="家长/测试模式：一键解锁全部27关">
+          <input type="checkbox" id="toggle-parent-mode" class="w-4 h-4 accent-emerald-500 cursor-pointer" onchange="toggleParentMode(this.checked)" />
+          <span class="text-xs font-extrabold text-slate-700">家长模式</span>
+        </label>
+        <button onclick="openModal('modal-ipad')" class="btn-3d w-10 h-10 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center" title="添加到 iPad 主屏幕">📱</button>
+        <button onclick="toggleSound()" class="btn-3d w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center" title="音效开关">
+          <span id="icon-sound">🔊</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== 视图 1：27 关主题岛屿冒险地图 ==================== -->
+  <main id="view-map" class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+    <section class="bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 rounded-3xl p-5 sm:p-7 text-white shadow-lg shadow-orange-200/60 mb-7 relative overflow-hidden">
+      <div class="absolute -right-10 -top-10 w-44 h-44 bg-white/15 rounded-full blur-xl pointer-events-none"></div>
+      <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs sm:text-sm font-bold mb-2">
+            <span>🗄️ IndexedDB 离线引擎 · aa–C 1,000 核心词 + D–Z 随时导入扩展</span>
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-black tracking-tight">系统征服 aa–Z 实景单词岛！</h2>
+          <p class="text-white/95 text-sm sm:text-base mt-1 font-medium">每轮智能抽取 10 个未掌握新词 · Wikimedia 真实摄影图自动匹配 · 语音评测 + 错词 Boss 战</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="openImportModal()" class="btn-3d min-h-[48px] px-4 rounded-2xl bg-white/20 hover:bg-white/30 border border-white/30 text-white font-extrabold text-xs sm:text-sm">📚 管理词库 / 导入 D–Z</button>
+          <label class="sm:hidden flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-black/20 text-xs font-extrabold">
+            <input type="checkbox" id="toggle-parent-mobile" class="w-4 h-4 accent-emerald-400" onchange="toggleParentMode(this.checked)" />
+            <span>家长解锁全27关</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="relative z-10 mt-5 bg-black/15 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-4 text-xs sm:text-sm font-bold">
+          <span>已掌握：<strong id="map-mastered">0</strong> / <strong id="map-total">0</strong> 词</span>
+          <span>星星：<strong id="map-stars">0</strong> ★</span>
+          <span class="cursor-pointer underline decoration-white/70" onclick="openSrsView()">今日艾宾浩斯待复习：<strong id="map-srs-due">0</strong> 词</span>
+        </div>
+        <div class="w-full sm:w-64 h-3 bg-white/25 rounded-full overflow-hidden">
+          <div id="map-progress-bar" class="h-full bg-white rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+      </div>
+    </section>
+
+    <div id="map-zones" class="space-y-7 pb-12"></div>
+  </main>
+
+  <!-- ==================== 视图 2：单人闯关 / 艾宾浩斯复习竞技场 ==================== -->
+  <main id="view-game" class="hidden flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-4 sm:py-6 flex flex-col">
+    <div class="flex items-center justify-between gap-3 mb-4">
+      <button onclick="openModal('modal-exit')" class="btn-3d min-h-[48px] px-4 rounded-2xl bg-white border border-slate-200 text-slate-600 font-extrabold text-sm shadow-sm">← 退出</button>
+      <div class="flex-1 flex flex-col gap-1">
+        <div class="flex items-center justify-between text-xs font-bold text-slate-500 px-1">
+          <span id="game-title" class="text-slate-800">Level aa</span>
+          <span id="game-progress-text">1 / 10</span>
+        </div>
+        <div class="w-full h-3.5 bg-slate-200/80 rounded-full overflow-hidden p-0.5">
+          <div id="game-progress-bar" class="h-full bg-gradient-to-r from-amber-400 to-coral rounded-full transition-all duration-300" style="width: 10%"></div>
+        </div>
+      </div>
+      <div class="min-h-[48px] flex items-center gap-1.5 px-3.5 rounded-2xl bg-purple-50 border border-purple-200 text-purple-700 font-extrabold text-xs sm:text-sm">
+        <span>👾</span><span>错词: <strong id="game-wrong-count">0</strong></span>
+      </div>
+    </div>
+
+    <!-- 连击能量条 -->
+    <div id="combo-wrapper" class="mb-4 bg-white rounded-2xl px-4 py-2.5 border border-amber-100 shadow-sm flex items-center justify-between gap-3 transition-all">
+      <div class="flex items-center gap-2"><span class="text-xl">🔥</span><span id="combo-label" class="font-extrabold text-sm text-slate-700">连击: 0</span></div>
+      <div class="flex-1 max-w-xs h-2.5 bg-slate-100 rounded-full overflow-hidden">
+        <div id="combo-fill" class="h-full bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+      </div>
+      <span id="fever-badge" class="hidden px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-rose-500 text-white text-xs font-black animate-pulse">FEVER 2X</span>
+    </div>
+
+    <!-- 错词大 Boss 血条 -->
+    <div id="boss-banner" class="hidden mb-4 bg-gradient-to-r from-purple-700 via-fuchsia-600 to-rose-600 rounded-3xl p-4 text-white shadow-lg flex items-center justify-between gap-4 animate-pop">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center text-3xl">👾</div>
+        <div>
+          <div class="inline-block text-[11px] font-black bg-black/25 px-2.5 py-0.5 rounded-full mb-0.5">⚔️ 错词大 BOSS 决战</div>
+          <h3 class="font-black text-sm sm:text-base">答对/读准所有错词，击败“吞词怪”！</h3>
+        </div>
+      </div>
+      <div class="w-32 sm:w-44 text-right">
+        <div class="text-xs font-extrabold mb-1">BOSS HP: <span id="boss-hp-text">3/3</span></div>
+        <div class="w-full h-3 bg-black/30 rounded-full overflow-hidden p-0.5">
+          <div id="boss-hp-bar" class="h-full bg-gradient-to-r from-yellow-300 to-rose-300 rounded-full transition-all" style="width: 100%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 题目主卡片 -->
+    <div id="question-card" class="flex-1 bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 p-5 sm:p-8 flex flex-col justify-between relative overflow-hidden"></div>
+
+    <!-- 底部反馈条 -->
+    <div id="feedback-bar" class="hidden mt-4 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg animate-pop">
+      <div class="flex items-center gap-3 w-full sm:w-auto">
+        <div id="feedback-icon" class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0"></div>
+        <div>
+          <div id="feedback-title" class="font-black text-base sm:text-lg"></div>
+          <div id="feedback-detail" class="text-xs sm:text-sm font-medium opacity-90"></div>
+        </div>
+      </div>
+      <button id="btn-next-q" onclick="nextQuestion()" class="btn-3d w-full sm:w-auto min-h-[52px] px-8 rounded-2xl font-black text-base text-white shadow-md">下一题 →</button>
+    </div>
+  </main>
+
+  <!-- ==================== 视图 3：通关结算 + 迷你双语故事 ==================== -->
+  <main id="view-summary" class="hidden flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-8">
+    <div class="bg-white rounded-3xl shadow-xl border border-amber-100 p-6 sm:p-9 text-center animate-pop">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100 text-amber-800 font-extrabold text-sm mb-3">🏆 闯关成功！</div>
+      <h2 id="summary-title" class="text-2xl sm:text-3xl font-black text-slate-800 mb-2">Level aa 本轮通关！</h2>
+      <div id="summary-stars" class="flex items-center justify-center gap-3 my-4 text-5xl"></div>
+
+      <div class="grid grid-cols-3 gap-3 my-6">
+        <div class="bg-amber-50 rounded-2xl p-4 border border-amber-100">
+          <div class="text-xs font-bold text-amber-700 mb-1">综合正确率</div>
+          <div id="summary-acc" class="text-2xl sm:text-3xl font-black text-amber-600">100%</div>
+        </div>
+        <div class="bg-rose-50 rounded-2xl p-4 border border-rose-100">
+          <div class="text-xs font-bold text-rose-700 mb-1">最高连击</div>
+          <div id="summary-combo" class="text-2xl sm:text-3xl font-black text-rose-600">5x</div>
+        </div>
+        <div class="bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
+          <div class="text-xs font-bold text-emerald-700 mb-1">艾宾浩斯入库</div>
+          <div id="summary-srs" class="text-2xl sm:text-3xl font-black text-emerald-600">10词</div>
+        </div>
+      </div>
+
+      <div class="text-left bg-gradient-to-br from-sky-50 to-indigo-50/70 rounded-3xl p-5 border border-sky-200 my-6">
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <h3 class="font-black text-slate-800 text-base flex items-center gap-2"><span>📖</span><span>本关迷你双语故事</span></h3>
+          <button onclick="readMiniStory()" class="btn-3d min-h-[44px] px-4 rounded-2xl bg-sky-500 text-white font-bold text-xs sm:text-sm shadow-sm">🔊 朗读故事</button>
+        </div>
+        <div id="summary-story-en" class="text-slate-800 font-bold text-base leading-relaxed mb-2"></div>
+        <div id="summary-story-zh" class="text-slate-500 font-medium text-sm leading-relaxed"></div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">
+        <button onclick="goHomeMap()" class="btn-3d w-full sm:w-auto min-h-[52px] px-7 rounded-2xl bg-slate-100 text-slate-700 font-extrabold text-base">返回地图</button>
+        <button id="btn-continue-level" onclick="continueSameLevel()" class="btn-3d w-full sm:w-auto min-h-[52px] px-8 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black text-base shadow-lg">继续挑战下一批新词 →</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== 视图 4：亲子双人分屏 PK 设置 ==================== -->
+  <main id="view-pk-setup" class="hidden flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div class="bg-white rounded-3xl shadow-xl border border-rose-100 p-6 sm:p-8 animate-pop">
+      <div class="flex items-center justify-between gap-3 mb-6">
+        <div>
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-700 font-black text-xs mb-2">⚔️ iPad 面对面分屏抢答</div>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-800">亲子双人 PK 抢答模式</h2>
+          <p class="text-sm text-slate-500 font-medium mt-1">iPad 平放桌面，同时看题抢拍！先答对 +10分与手速加分，答错触发 1.5 秒冰冻冷却</p>
+        </div>
+        <button onclick="goHomeMap()" class="btn-3d min-h-[48px] px-4 rounded-2xl bg-slate-100 text-slate-600 font-extrabold text-sm">返回地图</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+        <div class="bg-rose-50/70 rounded-2xl p-4 border border-rose-200">
+          <label class="block text-xs font-extrabold text-rose-700 mb-1.5">👨‍👩‍👧 玩家 1（上方 180° / 左侧）</label>
+          <input id="pk-p1-name" type="text" value="爸爸/妈妈" maxlength="10" class="w-full min-h-[48px] px-4 rounded-xl bg-white border border-rose-200 font-extrabold text-slate-800" />
+        </div>
+        <div class="bg-sky-50/70 rounded-2xl p-4 border border-sky-200">
+          <label class="block text-xs font-extrabold text-sky-700 mb-1.5">👦 玩家 2（下方正向 / 右侧）</label>
+          <input id="pk-p2-name" type="text" value="宝贝选手" maxlength="10" class="w-full min-h-[48px] px-4 rounded-xl bg-white border border-sky-200 font-extrabold text-slate-800" />
+        </div>
+      </div>
+
+      <div class="mb-5">
+        <div class="text-xs font-extrabold text-slate-500 mb-2">分屏视角</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button id="pk-lay-face" onclick="setPkLayout('face')" class="btn-3d min-h-[64px] p-4 rounded-2xl border-2 border-coral bg-orange-50/70 text-left flex items-center gap-3">
+            <span class="w-11 h-11 rounded-2xl bg-coral text-white flex items-center justify-center text-xl shrink-0">↕️</span>
+            <div>
+              <div class="font-black text-slate-800 text-sm">面对面分屏（默认）</div>
+              <div class="text-xs text-slate-500">上方旋转 180° 面向家长，下方正向面向孩子</div>
+            </div>
+          </button>
+          <button id="pk-lay-side" onclick="setPkLayout('side')" class="btn-3d min-h-[64px] p-4 rounded-2xl border-2 border-slate-200 bg-slate-50 text-left flex items-center gap-3">
+            <span class="w-11 h-11 rounded-2xl bg-slate-200 text-slate-700 flex items-center justify-center text-xl shrink-0">↔️</span>
+            <div>
+              <div class="font-black text-slate-800 text-sm">并排模式（桌面/横屏）</div>
+              <div class="text-xs text-slate-500">左右并排分屏，方便电脑预览或并肩抢答</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div>
+          <label class="block text-xs font-extrabold text-slate-500 mb-2">选择词库范围</label>
+          <select id="pk-level" class="w-full min-h-[52px] px-3.5 rounded-2xl bg-slate-50 border border-slate-200 font-extrabold text-slate-800 text-sm"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-extrabold text-slate-500 mb-2">抢答模式</label>
+          <select id="pk-mode" class="w-full min-h-[52px] px-3.5 rounded-2xl bg-slate-50 border border-slate-200 font-extrabold text-slate-800 text-sm">
+            <option value="mix">🎯 综合混合（英/汉/实景图）</option>
+            <option value="en_zh">🔤 看英选汉</option>
+            <option value="zh_en">🔤 看汉选英</option>
+            <option value="photo_en">📸 看实景图抢答</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-extrabold text-slate-500 mb-2">对战题数</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="setPkRounds(10)" id="pk-r-10" class="btn-3d min-h-[52px] rounded-2xl border-2 border-coral bg-orange-50 text-coral font-black text-sm">10题</button>
+            <button onclick="setPkRounds(15)" id="pk-r-15" class="btn-3d min-h-[52px] rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-600 font-black text-sm">15题</button>
+            <button onclick="setPkRounds(20)" id="pk-r-20" class="btn-3d min-h-[52px] rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-600 font-black text-sm">20题</button>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="startPkMatch()" class="btn-3d w-full min-h-[56px] rounded-2xl bg-gradient-to-r from-coral via-rose-500 to-amber-500 text-white font-black text-lg shadow-xl shadow-rose-200">
+        🚀 开始亲子双人 PK 抢答！
+      </button>
+    </div>
+  </main>
+
+  <!-- ==================== 视图 5：双人 PK 实时全屏竞技场 ==================== -->
+  <main id="view-pk-arena" class="hidden fixed inset-0 z-40 bg-slate-900 flex flex-col overflow-hidden"></main>
+
+  <!-- ==================== 视图 6：双人 PK 颁奖台 ==================== -->
+  <main id="view-pk-podium" class="hidden flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-8">
+    <div class="bg-white rounded-3xl shadow-2xl border border-amber-200 p-6 sm:p-9 text-center animate-pop">
+      <div class="text-5xl mb-2 animate-bounce">🏆</div>
+      <h2 id="pk-winner-title" class="text-2xl sm:text-4xl font-black text-slate-800 mb-6">宝贝选手 获胜！</h2>
+      <div class="grid grid-cols-2 gap-4 my-6">
+        <div class="rounded-3xl p-5 bg-rose-50 border-2 border-rose-300">
+          <div class="text-xs font-extrabold text-rose-600 mb-1">👨‍👩‍👧 玩家 1</div>
+          <div class="text-lg font-black text-slate-800" id="pod-p1-name">爸爸/妈妈</div>
+          <div class="text-4xl font-black text-rose-600 my-2" id="pod-p1-score">0</div>
+          <div class="text-xs font-bold text-slate-500">答对 <strong id="pod-p1-hits">0</strong> 题</div>
+        </div>
+        <div class="rounded-3xl p-5 bg-sky-50 border-2 border-sky-300">
+          <div class="text-xs font-extrabold text-sky-600 mb-1">👦 玩家 2</div>
+          <div class="text-lg font-black text-slate-800" id="pod-p2-name">宝贝选手</div>
+          <div class="text-4xl font-black text-sky-600 my-2" id="pod-p2-score">0</div>
+          <div class="text-xs font-bold text-slate-500">答对 <strong id="pod-p2-hits">0</strong> 题</div>
+        </div>
+      </div>
+
+      <div class="bg-indigo-50 rounded-2xl p-4 border border-indigo-200 my-5 text-left">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div class="font-black text-indigo-900 text-sm">🧠 本局错词：<span id="pk-wrong-num">0</span> 个</div>
+            <div class="text-xs text-indigo-700 font-medium">一键加入艾宾浩斯遗忘曲线复习，科学巩固</div>
+          </div>
+          <button id="btn-pk-srs" onclick="addPkWrongsToSrs()" class="btn-3d min-h-[48px] px-5 rounded-xl bg-indigo-600 text-white font-black text-xs sm:text-sm shrink-0">将本局错词加入艾宾浩斯复习</button>
+        </div>
+        <div id="pk-wrong-chips" class="flex flex-wrap gap-1.5 mt-3"></div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">
+        <button onclick="goHomeMap()" class="btn-3d w-full sm:w-auto min-h-[52px] px-7 rounded-2xl bg-slate-100 text-slate-700 font-extrabold">返回地图</button>
+        <button onclick="openPkSetupView()" class="btn-3d w-full sm:w-auto min-h-[52px] px-7 rounded-2xl bg-amber-100 text-amber-800 font-extrabold">修改设置</button>
+        <button onclick="startPkMatch()" class="btn-3d w-full sm:w-auto min-h-[52px] px-8 rounded-2xl bg-gradient-to-r from-coral to-rose-500 text-white font-black shadow-lg">再来一局！</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== 视图 7：每日艾宾浩斯遗忘曲线复习 & iPad 闹钟 ==================== -->
+  <main id="view-srs" class="hidden flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 pb-14">
+    <section class="bg-gradient-to-r from-indigo-600 via-blue-600 to-sky-500 rounded-3xl p-6 sm:p-7 text-white shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+      <div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-xs font-extrabold mb-2">🧠 艾宾浩斯 6 阶段记忆周期 (+1天 · +2天 · +4天 · +7天 · +15天 · +30天)</div>
+        <h2 class="text-2xl sm:text-3xl font-black tracking-tight">每日艾宾浩斯遗忘曲线复习</h2>
+        <p class="text-white/90 text-sm mt-1 font-medium">答对晋级下一阶段，答错自动重置回第 1 阶段，科学攻克遗忘</p>
+      </div>
+      <div class="flex flex-wrap gap-2.5 shrink-0">
+        <button onclick="simulateTimeTravelOneDay()" class="btn-3d min-h-[52px] px-4 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/30 text-white font-extrabold text-xs sm:text-sm">⏩ 模拟时间推移 1 天</button>
+        <button onclick="startSrsReviewSession(false)" class="btn-3d min-h-[52px] px-6 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-900 font-black text-sm shadow-lg">
+          🚀 开始今日复习 (<span id="srs-due-btn-num">0</span>)
+        </button>
+      </div>
+    </section>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="bg-white rounded-3xl p-5 border border-rose-100 shadow-sm flex items-center justify-between">
+        <div>
+          <div class="text-xs font-extrabold text-rose-500">今日待复习 (Due Today)</div>
+          <div id="srs-cnt-due" class="text-3xl font-black text-slate-800 mt-1">0</div>
+        </div>
+        <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center text-2xl">🔥</div>
+      </div>
+      <div class="bg-white rounded-3xl p-5 border border-sky-100 shadow-sm flex items-center justify-between">
+        <div>
+          <div class="text-xs font-extrabold text-sky-600">学习中 (Learning)</div>
+          <div id="srs-cnt-learning" class="text-3xl font-black text-slate-800 mt-1">0</div>
+        </div>
+        <div class="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center text-2xl">📅</div>
+      </div>
+      <div class="bg-white rounded-3xl p-5 border border-emerald-100 shadow-sm flex items-center justify-between">
+        <div>
+          <div class="text-xs font-extrabold text-emerald-600">永久掌握 (Mastered)</div>
+          <div id="srs-cnt-mastered" class="text-3xl font-black text-slate-800 mt-1">0</div>
+        </div>
+        <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl">🏆</div>
+      </div>
+    </div>
+
+    <!-- 6阶段柱状图 + 提前巩固 -->
+    <section class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <h3 class="font-black text-slate-800 text-base sm:text-lg">📊 艾宾浩斯 6 阶段记忆分布图</h3>
+        <button onclick="startSrsReviewSession(true)" class="btn-3d min-h-[44px] px-4 rounded-2xl bg-indigo-50 text-indigo-700 border border-indigo-200 font-extrabold text-xs">⚡ 提前巩固练习（无到期词也可练）</button>
+      </div>
+      <div id="srs-stage-chart" class="grid grid-cols-6 gap-3 items-end h-44 pt-4"></div>
+    </section>
+
+    <!-- 每日闹钟设置 & iPad .ics 导出 -->
+    <section class="bg-white rounded-3xl p-6 border border-amber-200 shadow-sm">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-2xl shrink-0">⏰</div>
+          <div>
+            <h3 class="font-black text-slate-800 text-lg">每日复习闹钟 & iPad 原生日历 (.ics)</h3>
+            <p class="text-xs text-slate-500 font-medium">导出含 <code class="bg-slate-100 px-1 rounded">RRULE:FREQ=DAILY</code> 与 <code class="bg-slate-100 px-1 rounded">VALARM</code> 的日历文件，关闭 Safari 后 iPad 每天也能准时响铃！</p>
+          </div>
+        </div>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="alarm-enabled" onchange="saveAlarmConfig()" class="w-5 h-5 accent-emerald-500" />
+          <span class="text-sm font-extrabold text-slate-700">开启应用内提醒</span>
+        </label>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5 items-end">
+        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200">
+          <label class="block text-xs font-extrabold text-slate-500 mb-2">每日提醒时间</label>
+          <input id="alarm-time" type="time" value="19:30" onchange="saveAlarmConfig()" class="w-full min-h-[48px] px-3.5 rounded-xl bg-white border border-slate-200 font-black text-lg text-slate-800" />
+        </div>
+        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex gap-2">
+          <button onclick="requestNotifPermission()" class="btn-3d flex-1 min-h-[52px] rounded-xl bg-sky-100 text-sky-800 font-extrabold text-xs">🔔 通知权限</button>
+          <button onclick="triggerAlarmDemo()" class="btn-3d flex-1 min-h-[52px] rounded-xl bg-rose-100 text-rose-700 font-extrabold text-xs">🔊 测试响铃</button>
+        </div>
+        <div>
+          <button onclick="exportIpadCalendarICS()" class="btn-3d w-full min-h-[56px] px-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black text-sm shadow-lg">
+            📅 下载 iPad 日历每日闹钟 (.ics)
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
+      <h3 class="font-black text-slate-800 text-base mb-3">📋 今日到期词表（点击听标准发音）</h3>
+      <div id="srs-due-chips" class="flex flex-wrap gap-2"></div>
+    </section>
+  </main>
+
+  <!-- ==================== 视图 8：实景图鉴收藏册 ==================== -->
+  <main id="view-album" class="hidden flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-5 pb-14">
+    <div class="bg-white rounded-3xl p-5 sm:p-6 border border-sky-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h2 class="text-2xl font-black text-slate-800 flex items-center gap-2">
+          <span>📸 实景图鉴收藏册</span>
+          <span id="album-badge" class="text-xs bg-sky-100 text-sky-700 px-3 py-1 rounded-full font-extrabold">0 词</span>
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">全真实摄影图（严禁卡通插画），含音标展示，点击即可听发音或切换照片</p>
+      </div>
+      <label class="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-extrabold text-slate-700 cursor-pointer">
+        <input type="checkbox" id="album-only-mastered" onchange="renderAlbumGrid()" class="w-4 h-4 accent-sky-500" />
+        <span>仅看已掌握</span>
+      </label>
+    </div>
+    <div id="album-tabs" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1"></div>
+    <div id="album-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+    <div id="album-more" class="text-center pt-2"></div>
+  </main>
+
+  <!-- ==================== 弹窗：关卡启动器 ==================== -->
+  <div id="modal-launch" class="hidden fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl animate-pop">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div id="launch-badge" class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-coral text-white font-black text-2xl flex items-center justify-center shadow-md">aa</div>
+          <div>
+            <h3 id="launch-title" class="text-xl font-black text-slate-800">Level aa</h3>
+            <p id="launch-sub" class="text-xs sm:text-sm text-slate-500 font-medium">已掌握 0 / 250 词</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-launch')" class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 font-bold">✕</button>
+      </div>
+
+      <div class="text-xs font-extrabold text-slate-400 uppercase mb-2">选择题型模式</div>
+      <div class="grid grid-cols-2 gap-2.5 mb-5">
+        <button onclick="setLaunchMode('mixed')" id="lm-mixed" class="btn-3d min-h-[52px] rounded-2xl border-2 border-coral bg-orange-50 text-coral font-extrabold text-sm">🎮 综合闯关（推荐）</button>
+        <button onclick="setLaunchMode('choice')" id="lm-choice" class="btn-3d min-h-[52px] rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-600 font-extrabold text-sm">🔤 中英互选</button>
+        <button onclick="setLaunchMode('photo')" id="lm-photo" class="btn-3d min-h-[52px] rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-600 font-extrabold text-sm">📸 看实景图说英语</button>
+        <button onclick="setLaunchMode('bilingual')" id="lm-bilingual" class="btn-3d min-h-[52px] rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-600 font-extrabold text-sm">🎙️ 双语语音快答</button>
+      </div>
+
+      <button onclick="startLevelBatchRound(false)" class="btn-3d w-full min-h-[56px] rounded-2xl bg-gradient-to-r from-amber-400 to-coral text-white font-black text-base shadow-lg mb-2.5">
+        🚀 开始本轮闯关（优先抽取 10 个未掌握新词）
+      </button>
+      <button onclick="startLevelBatchRound(true)" class="btn-3d w-full min-h-[48px] rounded-2xl bg-indigo-50 text-indigo-700 border border-indigo-200 font-extrabold text-sm">
+        🎲 全关随机抽测 10 词
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== 弹窗：无限词库管理与 D-Z 导入引擎 ==================== -->
+  <div id="modal-import" class="hidden fixed inset-0 z-40 bg-slate-900/55 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-3xl w-full p-5 sm:p-7 shadow-2xl animate-pop max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h3 class="text-xl font-black text-slate-800">📚 无限词库管理 & D–Z 导入引擎</h3>
+          <p class="text-xs text-slate-500 font-medium mt-0.5">IndexedDB 当前共存储 <strong id="imp-total-cnt" class="text-emerald-600">0</strong> 词 · 绿色表示满编词库，琥珀色为待扩充起步级别</p>
+        </div>
+        <button onclick="closeModal('modal-import')" class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 font-bold">✕</button>
+      </div>
+
+      <!-- 27 格紧凑词量矩阵 (aa - Z) -->
+      <div class="bg-slate-50 rounded-2xl p-3 border border-slate-200 mb-4">
+        <div class="flex items-center justify-between text-[11px] font-extrabold text-slate-500 mb-2 px-1">
+          <span>aa – Z 全部 27 关实时词量矩阵</span>
+          <span class="flex items-center gap-2">
+            <span class="inline-flex items-center gap-1"><i class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></i>≥100词</span>
+            <span class="inline-flex items-center gap-1"><i class="w-2 h-2 rounded-full bg-amber-400 inline-block"></i>起步词</span>
+          </span>
+        </div>
+        <div id="imp-level-matrix" class="grid grid-cols-6 sm:grid-cols-9 gap-1.5"></div>
+      </div>
+
+      <!-- 工具按钮 -->
+      <div class="flex flex-wrap gap-2 mb-3">
+        <button onclick="downloadCsvTemplate()" class="btn-3d min-h-[44px] px-4 rounded-xl bg-sky-50 text-sky-700 border border-sky-200 font-extrabold text-xs">📄 下载标准 CSV 模板（含 D–Z 示例）</button>
+        <button onclick="exportBackupJson()" class="btn-3d min-h-[44px] px-4 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 font-extrabold text-xs">💾 导出整库 JSON 备份</button>
+        <label class="btn-3d cursor-pointer min-h-[44px] px-4 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-extrabold text-xs flex items-center">
+          📁 上传 .csv / .json 文件
+          <input type="file" accept=".csv,.json,.txt" class="hidden" onchange="handleImportFile(event)" />
+        </label>
+      </div>
+
+      <!-- 导入模式 -->
+      <div class="flex flex-wrap items-center gap-4 mb-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+        <span class="text-xs font-extrabold text-slate-500">导入模式：</span>
+        <label class="flex items-center gap-1.5 text-xs font-extrabold text-slate-700 cursor-pointer">
+          <input type="radio" name="imp-mode" value="merge" checked class="accent-emerald-500" /> 合并追加（保留原词、去重更新）
+        </label>
+        <label class="flex items-center gap-1.5 text-xs font-extrabold text-slate-700 cursor-pointer">
+          <input type="radio" name="imp-mode" value="overwrite" class="accent-rose-500" /> 覆盖对应级别
+        </label>
+      </div>
+
+      <textarea id="imp-textarea" rows="5" placeholder="粘贴 CSV 行（格式：level,word,zh,phonetic,imageUrl 后两项可选）或 JSON 数组/备份文件&#10;示例：&#10;D,dolphin,海豚,/ˈdɒlfɪn/,&#10;E,volunteer,志愿者,/ˌvɒlənˈtɪə(r)/," class="w-full rounded-2xl border border-slate-200 p-3.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-400 mb-4"></textarea>
+
+      <div class="flex justify-end gap-2">
+        <button onclick="closeModal('modal-import')" class="btn-3d min-h-[48px] px-5 rounded-2xl bg-slate-100 text-slate-600 font-extrabold text-sm">关闭</button>
+        <button onclick="runBulkImport()" class="btn-3d min-h-[48px] px-7 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black text-sm shadow-md">⚡ 写入 IndexedDB 并刷新地图</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 弹窗：iPad 主屏幕指南 ==================== -->
+  <div id="modal-ipad" class="hidden fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl animate-pop">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-black text-slate-800">📱 安装到 iPad 主屏幕</h3>
+        <button onclick="closeModal('modal-ipad')" class="w-9 h-9 rounded-full bg-slate-100 text-slate-500 font-bold">✕</button>
+      </div>
+      <ol class="space-y-3 text-sm text-slate-600 font-medium">
+        <li class="flex gap-3"><span class="w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-black flex items-center justify-center shrink-0">1</span><span>使用 iPad <strong>Safari</strong> 打开本页面。</span></li>
+        <li class="flex gap-3"><span class="w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-black flex items-center justify-center shrink-0">2</span><span>点击右上角 <strong>分享按钮</strong>（带向上箭头的方框）。</span></li>
+        <li class="flex gap-3"><span class="w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-black flex items-center justify-center shrink-0">3</span><span>选择 <strong>“添加到主屏幕”</strong>，即可像原生 App 一样全屏离线背词与面对面 PK！</span></li>
+      </ol>
+      <button onclick="closeModal('modal-ipad')" class="btn-3d w-full mt-5 min-h-[48px] rounded-2xl bg-slate-800 text-white font-extrabold text-sm">我知道了</button>
+    </div>
+  </div>
+
+  <!-- ==================== 弹窗：退出闯关确认 ==================== -->
+  <div id="modal-exit" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl animate-pop">
+      <div class="text-4xl mb-2">🗺️</div>
+      <h3 class="text-lg font-black text-slate-800 mb-1">确定要离开当前闯关吗？</h3>
+      <p class="text-xs text-slate-500 mb-5">已完成的单词掌握进度和艾宾浩斯排期已自动保存。</p>
+      <div class="flex gap-3">
+        <button onclick="closeModal('modal-exit')" class="btn-3d flex-1 min-h-[48px] rounded-2xl bg-slate-100 text-slate-700 font-extrabold text-sm">继续答题</button>
+        <button onclick="closeModal('modal-exit'); goHomeMap();" class="btn-3d flex-1 min-h-[48px] rounded-2xl bg-coral text-white font-extrabold text-sm">确认离开</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 核心 JS 逻辑 ==================== -->
+  <script>
+    /* =========================================================================
+       1. 预置分级核心词库：aa–C 严格 1,000 词（每级 250 个不重复真词 + 音标）
+          以及 D–Z 全部 23 关起步词（每关 10 词），格式：word|zh|phonetic
+    ========================================================================= */
+    const LEVELS = ['aa','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+
+    const ZONES = [
+      { name: '启蒙阳光果园 (千词核心区)', badge: 'aa – C · 1000词', grad: 'from-amber-100/80 to-orange-50', border: 'border-amber-200', levels: ['aa','A','B','C'] },
+      { name: '自然森林探险', badge: 'D – I · 初级阅读', grad: 'from-emerald-100/70 to-teal-50', border: 'border-emerald-200', levels: ['D','E','F','G','H','I'] },
+      { name: '科学探索城镇', badge: 'J – P · 中级科普', grad: 'from-sky-100/70 to-indigo-50', border: 'border-sky-200', levels: ['J','K','L','M','N','O','P'] },
+      { name: '人文博物海洋', badge: 'Q – U · 高阶思辨', grad: 'from-cyan-100/70 to-blue-50', border: 'border-cyan-200', levels: ['Q','R','S','T','U'] },
+      { name: '星际学术殿堂', badge: 'V – Z · 学术巅峰', grad: 'from-purple-100/70 to-fuchsia-50', border: 'border-purple-200', levels: ['V','W','X','Y','Z'] }
+    ];
+
+    const SEED_VOCAB = {
+      // Level aa: 25 行 × 10 词 = 严格 250 个不重复启蒙高频词
+      aa: [
+        "apple|苹果|/ˈæpl/;ball|球|/bɔːl/;cat|猫|/kæt/;dog|狗|/dɒɡ/;egg|鸡蛋|/eɡ/;fish|鱼|/fɪʃ/;goat|山羊|/ɡəʊt/;hat|帽子|/hæt/;ice|冰|/aɪs/;jam|果酱|/dʒæm/",
+        "kite|风筝|/kaɪt/;leaf|树叶|/liːf/;milk|牛奶|/mɪlk/;nest|鸟巢|/nest/;owl|猫头鹰|/aʊl/;pig|小猪|/pɪɡ/;queen|女王|/kwiːn/;rain|雨|/reɪn/;sun|太阳|/sʌn/;tree|树|/triː/",
+        "umbrella|雨伞|/ʌmˈbrelə/;van|面包车|/væn/;web|蜘蛛网|/web/;box|盒子|/bɒks/;yak|牦牛|/jæk/;zoo|动物园|/zuː/;ant|蚂蚁|/ænt/;bear|熊|/beə/;car|汽车|/kɑː/;duck|鸭子|/dʌk/",
+        "ear|耳朵|/ɪə/;frog|青蛙|/frɒɡ/;girl|女孩|/ɡɜːl/;boy|男孩|/bɔɪ/;hand|手|/hænd/;ink|墨水|/ɪŋk/;jar|罐子|/dʒɑː/;key|钥匙|/kiː/;leg|腿|/leɡ/;moon|月亮|/muːn/",
+        "nose|鼻子|/nəʊz/;ox|公牛|/ɒks/;pan|平底锅|/pæn/;quilt|被子|/kwɪlt/;rat|老鼠|/ræt/;star|星星|/stɑː/;top|陀螺|/tɒp/;urn|坛子|/ɜːn/;vest|背心|/vest/;wig|假发|/wɪɡ/",
+        "red|红色|/red/;blue|蓝色|/bluː/;green|绿色|/ɡriːn/;yellow|黄色|/ˈjeləʊ/;orange|橙色|/ˈɒrɪndʒ/;purple|紫色|/ˈpɜːpl/;pink|粉色|/pɪŋk/;black|黑色|/blæk/;white|白色|/waɪt/;brown|棕色|/braʊn/",
+        "gray|灰色|/ɡreɪ/;gold|金色|/ɡəʊld/;one|一|/wʌn/;two|二|/tuː/;three|三|/θriː/;four|四|/fɔː/;five|五|/faɪv/;six|六|/sɪks/;seven|七|/ˈsevn/;eight|八|/eɪt/",
+        "nine|九|/naɪn/;ten|十|/ten/;zero|零|/ˈzɪərəʊ/;eleven|十一|/ɪˈlevn/;twelve|十二|/twelv/;thirteen|十三|/ˌθɜːˈtiːn/;fourteen|十四|/ˌfɔːˈtiːn/;fifteen|十五|/ˌfɪfˈtiːn/;sixteen|十六|/ˌsɪksˈtiːn/;twenty|二十|/ˈtwenti/",
+        "mom|妈妈|/mɒm/;dad|爸爸|/dæd/;baby|宝宝|/ˈbeɪbi/;sister|姐妹|/ˈsɪstə/;brother|兄弟|/ˈbrʌðə/;grandma|奶奶|/ˈɡrænmɑː/;grandpa|爷爷|/ˈɡrænpɑː/;aunt|阿姨|/ɑːnt/;uncle|叔叔|/ˈʌŋkl/;family|家庭|/ˈfæməli/",
+        "eye|眼睛|/aɪ/;mouth|嘴巴|/maʊθ/;arm|手臂|/ɑːm/;foot|脚|/fʊt/;feet|双脚|/fiːt/;head|头|/hed/;hair|头发|/heə/;face|脸|/feɪs/;chin|下巴|/tʃɪn/;neck|脖子|/nek/",
+        "knee|膝盖|/niː/;toe|脚趾|/təʊ/;finger|手指|/ˈfɪŋɡə/;tooth|牙齿|/tuːθ/;lip|嘴唇|/lɪp/;back|背部|/bæk/;bed|床|/bed/;chair|椅子|/tʃeə/;table|桌子|/ˈteɪbl/;desk|书桌|/desk/",
+        "door|门|/dɔː/;window|窗户|/ˈwɪndəʊ/;wall|墙|/wɔːl/;floor|地板|/flɔː/;roof|屋顶|/ruːf/;rug|地毯|/rʌɡ/;lamp|台灯|/læmp/;clock|时钟|/klɒk/;sofa|沙发|/ˈsəʊfə/;bath|浴缸|/bɑːθ/",
+        "sink|水槽|/sɪŋk/;soap|肥皂|/səʊp/;towel|毛巾|/ˈtaʊəl/;cup|杯子|/kʌp/;mug|马克杯|/mʌɡ/;bowl|碗|/bəʊl/;plate|盘子|/pleɪt/;spoon|勺子|/spuːn/;fork|叉子|/fɔːk/;knife|刀|/naɪf/",
+        "pot|锅|/pɒt/;lid|盖子|/lɪd/;can|罐头|/kæn/;bag|包|/bæɡ/;bin|垃圾桶|/bɪn/;mat|垫子|/mæt/;fan|风扇|/fæn/;bell|铃铛|/bel/;book|书|/bʊk/;pen|钢笔|/pen/",
+        "pencil|铅笔|/ˈpensl/;paper|纸|/ˈpeɪpə/;glue|胶水|/ɡluː/;tape|胶带|/teɪp/;ruler|尺子|/ˈruːlə/;crayon|蜡笔|/ˈkreɪən/;paint|颜料|/peɪnt/;brush|画笔|/brʌʃ/;chalk|粉笔|/tʃɔːk/;board|黑板|/bɔːd/",
+        "cow|奶牛|/kaʊ/;hen|母鸡|/hen/;chick|小鸡|/tʃɪk/;sheep|绵羊|/ʃiːp/;lamb|小羊|/læm/;horse|马|/hɔːs/;pony|小马|/ˈpəʊni/;bee|蜜蜂|/biː/;bug|虫子|/bʌɡ/;fly|苍蝇|/flaɪ/",
+        "fox|狐狸|/fɒks/;wolf|狼|/wʊlf/;deer|鹿|/dɪə/;lion|狮子|/ˈlaɪən/;tiger|老虎|/ˈtaɪɡə/;zebra|斑马|/ˈzebrə/;panda|大熊猫|/ˈpændə/;monkey|猴子|/ˈmʌŋki/;rabbit|兔子|/ˈræbɪt/;mouse|小鼠|/maʊs/",
+        "bird|小鸟|/bɜːd/;bat|蝙蝠|/bæt/;crab|螃蟹|/kræb/;whale|鲸鱼|/weɪl/;shark|鲨鱼|/ʃɑːk/;seal|海豹|/siːl/;snail|蜗牛|/sneɪl/;worm|蠕虫|/wɜːm/;snake|蛇|/sneɪk/;turtle|乌龟|/ˈtɜːtl/",
+        "bread|面包|/bred/;cake|蛋糕|/keɪk/;pie|派|/paɪ/;bun|小圆面包|/bʌn/;rice|米饭|/raɪs/;soup|汤|/suːp/;meat|肉|/miːt/;ham|火腿|/hæm/;corn|玉米|/kɔːn/;pea|豌豆|/piː/",
+        "bean|豆子|/biːn/;nut|坚果|/nʌt/;pear|梨|/peə/;plum|李子|/plʌm/;peach|桃子|/piːtʃ/;grape|葡萄|/ɡreɪp/;lemon|柠檬|/ˈlemən/;lime|青柠|/laɪm/;melon|瓜|/ˈmelən/;berry|浆果|/ˈberi/",
+        "banana|香蕉|/bəˈnɑːnə/;mango|芒果|/ˈmæŋɡəʊ/;cherry|樱桃|/ˈtʃeri/;carrot|胡萝卜|/ˈkærət/;potato|土豆|/pəˈteɪtəʊ/;tomato|西红柿|/təˈmɑːtəʊ/;onion|洋葱|/ˈʌnjən/;water|水|/ˈwɔːtə/;juice|果汁|/dʒuːs/;tea|茶|/tiː/",
+        "sky|天空|/skaɪ/;cloud|云|/klaʊd/;wind|风|/wɪnd/;snow|雪|/snəʊ/;fog|雾|/fɒɡ/;mud|泥巴|/mʌd/;sand|沙子|/sænd/;rock|岩石|/rɒk/;stone|石头|/stəʊn/;hill|山丘|/hɪl/",
+        "pond|池塘|/pɒnd/;lake|湖泊|/leɪk/;river|河流|/ˈrɪvə/;sea|大海|/siː/;wave|海浪|/weɪv/;grass|草|/ɡrɑːs/;bush|灌木|/bʊʃ/;seed|种子|/siːd/;root|树根|/ruːt/;log|原木|/lɒɡ/",
+        "flower|花朵|/ˈflaʊə/;rose|玫瑰|/rəʊz/;lily|百合|/ˈlɪli/;daisy|雏菊|/ˈdeɪzi/;circle|圆形|/ˈsɜːkl/;square|正方形|/skweə/;triangle|三角形|/ˈtraɪæŋɡl/;oval|椭圆形|/ˈəʊvl/;heart|心形|/hɑːt/;cube|立方体|/kjuːb/",
+        "bus|公交车|/bʌs/;bike|自行车|/baɪk/;boat|小船|/bəʊt/;ship|轮船|/ʃɪp/;train|火车|/treɪn/;truck|卡车|/trʌk/;plane|飞机|/pleɪn/;taxi|出租车|/ˈtæksi/;sled|雪橇|/sled/;drum|鼓|/drʌm/"
+      ].join(';'),
+
+      // Level A: 25 行 × 10 词 = 严格 250 个不重复初级阅读词
+      A: [
+        "run|跑|/rʌn/;jump|跳|/dʒʌmp/;walk|走|/wɔːk/;hop|单脚跳|/hɒp/;skip|蹦跳|/skɪp/;swim|游泳|/swɪm/;climb|爬|/klaɪm/;sit|坐|/sɪt/;stand|站|/stænd/;sleep|睡觉|/sliːp/",
+        "eat|吃|/iːt/;drink|喝|/drɪŋk/;cook|做饭|/kʊk/;bake|烘焙|/beɪk/;cut|切|/kʌt/;mix|搅拌|/mɪks/;pour|倒|/pɔː/;wash|洗|/wɒʃ/;dry|擦干|/draɪ/;clean|打扫|/kliːn/",
+        "read|读|/riːd/;write|写|/raɪt/;draw|画画|/drɔː/;sing|唱歌|/sɪŋ/;dance|跳舞|/dɑːns/;play|玩|/pleɪ/;kick|踢|/kɪk/;throw|扔|/θrəʊ/;catch|接住|/kætʃ/;hit|击打|/hɪt/",
+        "push|推|/pʊʃ/;pull|拉|/pʊl/;lift|举起|/lɪft/;carry|搬运|/ˈkæri/;drop|掉落|/drɒp/;open|打开|/ˈəʊpən/;close|关闭|/kləʊz/;lock|锁上|/lɒk/;turn|转动|/tɜːn/;spin|旋转|/spɪn/",
+        "look|看|/lʊk/;see|看见|/siː/;watch|观看|/wɒtʃ/;hear|听见|/hɪə/;listen|倾听|/ˈlɪsn/;smell|闻|/smel/;taste|品尝|/teɪst/;touch|触摸|/tʌtʃ/;feel|感觉|/fiːl/;hold|握住|/həʊld/",
+        "smile|微笑|/smaɪl/;laugh|大笑|/lɑːf/;cry|哭|/kraɪ/;yawn|打哈欠|/jɔːn/;clap|拍手|/klæp/;wave|挥手|/weɪv/;hug|拥抱|/hʌɡ/;kiss|亲吻|/kɪs/;help|帮助|/help/;share|分享|/ʃeə/",
+        "give|给|/ɡɪv/;take|拿|/teɪk/;make|制作|/meɪk/;build|建造|/bɪld/;fix|修理|/fɪks/;dig|挖|/dɪɡ/;plant|种植|/plɑːnt/;grow|生长|/ɡrəʊ/;pick|采摘|/pɪk/;feed|喂养|/fiːd/",
+        "coat|外套|/kəʊt/;shirt|衬衫|/ʃɜːt/;pants|裤子|/pænts/;shorts|短裤|/ʃɔːts/;dress|连衣裙|/dres/;skirt|短裙|/skɜːt/;sock|袜子|/sɒk/;shoe|鞋子|/ʃuː/;boot|靴子|/buːt/;belt|皮带|/belt/",
+        "scarf|围巾|/skɑːf/;glove|手套|/ɡlʌv/;mitten|连指手套|/ˈmɪtn/;cap|鸭舌帽|/kæp/;hood|兜帽|/hʊd/;pocket|口袋|/ˈpɒkɪt/;button|纽扣|/ˈbʌtn/;zipper|拉链|/ˈzɪpə/;ribbon|丝带|/ˈrɪbən/;glasses|眼镜|/ˈɡlɑːsɪz/",
+        "house|房子|/haʊs/;home|家|/həʊm/;room|房间|/ruːm/;kitchen|厨房|/ˈkɪtʃɪn/;bedroom|卧室|/ˈbedruːm/;yard|院子|/jɑːd/;garden|花园|/ˈɡɑːdn/;porch|门廊|/pɔːtʃ/;garage|车库|/ˈɡærɑːʒ/;attic|阁楼|/ˈætɪk/",
+        "stairs|楼梯|/steəz/;hall|走廊|/hɔːl/;closet|衣柜|/ˈklɒzɪt/;shelf|架子|/ʃelf/;mirror|镜子|/ˈmɪrə/;pillow|枕头|/ˈpɪləʊ/;blanket|毯子|/ˈblæŋkɪt/;sheet|床单|/ʃiːt/;curtain|窗帘|/ˈkɜːtn/;couch|长椅|/kaʊtʃ/",
+        "oven|烤箱|/ˈʌvn/;stove|炉灶|/stəʊv/;fridge|冰箱|/frɪdʒ/;toaster|烤面包机|/ˈtəʊstə/;kettle|水壶|/ˈketl/;broom|扫帚|/bruːm/;mop|拖把|/mɒp/;bucket|水桶|/ˈbʌkɪt/;sponge|海绵|/spʌndʒ/;trash|垃圾|/træʃ/",
+        "school|学校|/skuːl/;class|班级|/klɑːs/;teacher|老师|/ˈtiːtʃə/;student|学生|/ˈstjuːdnt/;friend|朋友|/frend/;locker|储物柜|/ˈlɒkə/;backpack|书包|/ˈbækpæk/;notebook|笔记本|/ˈnəʊtbʊk/;eraser|橡皮|/ɪˈreɪzə/;scissors|剪刀|/ˈsɪzəz/",
+        "marker|马克笔|/ˈmɑːkə/;folder|文件夹|/ˈfəʊldə/;globe|地球仪|/ɡləʊb/;map|地图|/mæp/;chart|图表|/tʃɑːt/;puzzle|拼图|/ˈpʌzl/;block|积木|/blɒk/;doll|洋娃娃|/dɒl/;teddy|泰迪熊|/ˈtedi/;wagon|小推车|/ˈwæɡən/",
+        "swing|秋千|/swɪŋ/;slide|滑梯|/slaɪd/;sandbox|沙坑|/ˈsændbɒks/;seesaw|跷跷板|/ˈsiːsɔː/;park|公园|/pɑːk/;bench|长凳|/bentʃ/;path|小路|/pɑːθ/;gate|大门|/ɡeɪt/;fence|栅栏|/fens/;bridge|桥|/brɪdʒ/",
+        "road|道路|/rəʊd/;street|街道|/striːt/;corner|拐角|/ˈkɔːnə/;sign|标志|/saɪn/;light|灯光|/laɪt/;store|商店|/stɔː/;shop|铺子|/ʃɒp/;farm|农场|/fɑːm/;barn|谷仓|/bɑːn/;tractor|拖拉机|/ˈtræktə/",
+        "hay|干草|/heɪ/;straw|稻草|/strɔː/;field|田野|/fiːld/;well|水井|/wel/;shed|棚屋|/ʃed/;rooster|公鸡|/ˈruːstə/;turkey|火鸡|/ˈtɜːki/;goose|大鹅|/ɡuːs/;donkey|驴|/ˈdɒŋki/;mule|骡子|/mjuːl/",
+        "calf|小牛|/kɑːf/;foal|小马驹|/fəʊl/;kitten|小猫|/ˈkɪtn/;puppy|小狗|/ˈpʌpi/;duckling|小鸭|/ˈdʌklɪŋ/;swan|天鹅|/swɒn/;robin|知更鸟|/ˈrɒbɪn/;crow|乌鸦|/krəʊ/;hawk|老鹰|/hɔːk/;dove|鸽子|/dʌv/",
+        "pigeon|信鸽|/ˈpɪdʒɪn/;parrot|鹦鹉|/ˈpærət/;penguin|企鹅|/ˈpeŋɡwɪn/;peacock|孔雀|/ˈpiːkɒk/;camel|骆驼|/ˈkæml/;giraffe|长颈鹿|/dʒəˈrɑːf/;hippo|河马|/ˈhɪpəʊ/;rhino|犀牛|/ˈraɪnəʊ/;elephant|大象|/ˈelɪfənt/;kangaroo|袋鼠|/ˌkæŋɡəˈruː/",
+        "koala|考拉|/kəʊˈɑːlə/;sloth|树懒|/sləʊθ/;otter|水獭|/ˈɒtə/;beaver|海狸|/ˈbiːvə/;big|大的|/bɪɡ/;small|小的|/smɔːl/;tall|高的|/tɔːl/;short|矮的|/ʃɔːt/;long|长的|/lɒŋ/;wide|宽的|/waɪd/",
+        "thin|瘦的|/θɪn/;fat|胖的|/fæt/;heavy|重的|/ˈhevi/;soft|软的|/sɒft/;hard|硬的|/hɑːd/;hot|热的|/hɒt/;cold|冷的|/kəʊld/;warm|温暖的|/wɔːm/;cool|凉爽的|/kuːl/;wet|湿的|/wet/",
+        "smooth|光滑的|/smuːð/;rough|粗糙的|/rʌf/;fast|快的|/fɑːst/;slow|慢的|/sləʊ/;loud|大声的|/laʊd/;quiet|安静的|/ˈkwaɪət/;dirty|脏的|/ˈdɜːti/;new|新的|/njuː/;old|旧的|/əʊld/;young|年轻的|/jʌŋ/",
+        "happy|开心的|/ˈhæpi/;sad|难过的|/sæd/;mad|生气的|/mæd/;glad|高兴的|/ɡlæd/;kind|善良的|/kaɪnd/;sweet|甜的|/swiːt/;sour|酸的|/ˈsaʊə/;salty|咸的|/ˈsɔːlti/;bitter|苦的|/ˈbɪtə/;fresh|新鲜的|/freʃ/",
+        "ripe|成熟的|/raɪp/;morning|早晨|/ˈmɔːnɪŋ/;noon|中午|/nuːn/;night|夜晚|/naɪt/;today|今天|/təˈdeɪ/;day|白天|/deɪ/;week|星期|/wiːk/;sunshine|阳光|/ˈsʌnʃaɪn/;rainbow|彩虹|/ˈreɪnbəʊ/;puddle|水洼|/ˈpʌdl/",
+        "shadow|影子|/ˈʃædəʊ/;always|总是|/ˈɔːlweɪz/;never|从不|/ˈnevə/;often|经常|/ˈɒfn/;here|这里|/hɪə/;there|那里|/ðeə/;where|哪里|/weə/;when|何时|/wen/;why|为什么|/waɪ/;how|怎样|/haʊ/"
+      ].join(';'),
+
+      // Level B: 25 行 × 10 词 = 严格 250 个不重复日常与自然词
+      B: [
+        "doctor|医生|/ˈdɒktə/;nurse|护士|/nɜːs/;dentist|牙医|/ˈdentɪst/;vet|兽医|/vet/;chef|厨师|/ʃef/;baker|面包师|/ˈbeɪkə/;farmer|农民|/ˈfɑːmə/;pilot|飞行员|/ˈpaɪlət/;driver|司机|/ˈdraɪvə/;sailor|水手|/ˈseɪlə/",
+        "police|警察|/pəˈliːs/;fireman|消防员|/ˈfaɪəmən/;mail|邮件|/meɪl/;mailman|邮递员|/ˈmeɪlmæn/;artist|艺术家|/ˈɑːtɪst/;painter|画家|/ˈpeɪntə/;singer|歌手|/ˈsɪŋə/;dancer|舞者|/ˈdɑːnsə/;actor|演员|/ˈæktə/;writer|作家|/ˈraɪtə/",
+        "builder|建筑工|/ˈbɪldə/;plumber|水管工|/ˈplʌmə/;barber|理发师|/ˈbɑːbə/;tailor|裁缝|/ˈteɪlə/;guard|保安|/ɡɑːd/;coach|教练|/kəʊtʃ/;judge|法官|/dʒʌdʒ/;mayor|市长|/meə/;king|国王|/kɪŋ/;prince|王子|/prɪns/",
+        "airplane|飞机|/ˈeəpleɪn/;jet|喷气机|/dʒet/;rocket|火箭|/ˈrɒkɪt/;helicopter|直升机|/ˈhelɪkɒptə/;subway|地铁|/ˈsʌbweɪ/;tram|电车|/træm/;ferry|渡轮|/ˈferi/;canoe|独木舟|/kəˈnuː/;kayak|皮划艇|/ˈkaɪæk/;yacht|游艇|/jɒt/",
+        "sailboat|帆船|/ˈseɪlbəʊt/;raft|木筏|/rɑːft/;scooter|滑板车|/ˈskuːtə/;skateboard|滑板|/ˈskeɪtbɔːd/;tricycle|三轮车|/ˈtraɪsɪkl/;ambulance|救护车|/ˈæmbjələns/;firetruck|消防车|/ˈfaɪətrʌk/;bulldozer|推土机|/ˈbʊldəʊzə/;crane|起重机|/kreɪn/;towtruck|拖车|/ˈtəʊtrʌk/",
+        "pizza|披萨|/ˈpiːtsə/;burger|汉堡|/ˈbɜːɡə/;hotdog|热狗|/ˈhɒtdɒɡ/;sandwich|三明治|/ˈsænwɪtʃ/;pasta|意面|/ˈpæstə/;noodle|面条|/ˈnuːdl/;salad|沙拉|/ˈsæləd/;cheese|奶酪|/tʃiːz/;butter|黄油|/ˈbʌtə/;yogurt|酸奶|/ˈjɒɡət/",
+        "honey|蜂蜜|/ˈhʌni/;sugar|糖|/ˈʃʊɡə/;salt|盐|/sɔːlt/;pepper|胡椒|/ˈpepə/;flour|面粉|/ˈflaʊə/;dough|面团|/dəʊ/;toast|吐司|/təʊst/;pancake|煎饼|/ˈpænkeɪk/;waffle|华夫饼|/ˈwɒfl/;cereal|麦片|/ˈsɪəriəl/",
+        "oatmeal|燕麦粥|/ˈəʊtmiːl/;cookie|饼干|/ˈkʊki/;donut|甜甜圈|/ˈdəʊnʌt/;muffin|玛芬|/ˈmʌfɪn/;cupcake|纸杯蛋糕|/ˈkʌpkeɪk/;candy|糖果|/ˈkændi/;popcorn|爆米花|/ˈpɒpkɔːn/;pretzel|椒盐卷饼|/ˈpretsl/;cracker|苏打饼|/ˈkrækə/;chocolate|巧克力|/ˈtʃɒklət/",
+        "strawberry|草莓|/ˈstrɔːbəri/;blueberry|蓝莓|/ˈbluːbəri/;raspberry|覆盆子|/ˈrɑːzbəri/;pineapple|菠萝|/ˈpaɪnæpl/;watermelon|西瓜|/ˈwɔːtəmelən/;coconut|椰子|/ˈkəʊkənʌt/;papaya|木瓜|/pəˈpaɪə/;kiwi|猕猴桃|/ˈkiːwiː/;avocado|牛油果|/ˌævəˈkɑːdəʊ/;apricot|杏子|/ˈeɪprɪkɒt/",
+        "broccoli|西兰花|/ˈbrɒkəli/;spinach|菠菜|/ˈspɪnɪtʃ/;cabbage|卷心菜|/ˈkæbɪdʒ/;lettuce|生菜|/ˈletɪs/;celery|芹菜|/ˈseləri/;cucumber|黄瓜|/ˈkjuːkʌmbə/;pumpkin|南瓜|/ˈpʌmpkɪn/;squash|西葫芦|/skwɒʃ/;radish|萝卜|/ˈrædɪʃ/;turnip|芜菁|/ˈtɜːnɪp/",
+        "garlic|大蒜|/ˈɡɑːlɪk/;ginger|生姜|/ˈdʒɪndʒə/;mushroom|蘑菇|/ˈmʌʃrʊm/;olive|橄榄|/ˈɒlɪv/;pickle|酸黄瓜|/ˈpɪkl/;peanut|花生|/ˈpiːnʌt/;walnut|核桃|/ˈwɔːlnʌt/;almond|杏仁|/ˈɑːmənd/;cashew|腰果|/ˈkæʃuː/;chestnut|栗子|/ˈtʃesnʌt/",
+        "butterfly|蝴蝶|/ˈbʌtəflaɪ/;caterpillar|毛毛虫|/ˈkætəpɪlə/;ladybug|瓢虫|/ˈleɪdibʌɡ/;dragonfly|蜻蜓|/ˈdræɡənflaɪ/;grasshopper|蚱蜢|/ˈɡrɑːshɒpə/;cricket|蟋蟀|/ˈkrɪkɪt/;beetle|甲虫|/ˈbiːtl/;firefly|萤火虫|/ˈfaɪəflaɪ/;mosquito|蚊子|/məˈskiːtəʊ/;moth|飞蛾|/mɒθ/",
+        "spider|蜘蛛|/ˈspaɪdə/;scorpion|蝎子|/ˈskɔːpiən/;centipede|蜈蚣|/ˈsentɪpiːd/;dolphin|海豚|/ˈdɒlfɪn/;octopus|章鱼|/ˈɒktəpəs/;squid|鱿鱼|/skwɪd/;jellyfish|水母|/ˈdʒelifɪʃ/;starfish|海星|/ˈstɑːfɪʃ/;seahorse|海马|/ˈsiːhɔːs/;lobster|龙虾|/ˈlɒbstə/",
+        "shrimp|虾|/ʃrɪmp/;clam|蛤蜊|/klæm/;oyster|牡蛎|/ˈɔɪstə/;coral|珊瑚|/ˈkɒrəl/;shell|贝壳|/ʃel/;walrus|海象|/ˈwɔːlrəs/;manatee|海牛|/ˈmænətiː/;pelican|鹈鹕|/ˈpelɪkən/;seagull|海鸥|/ˈsiːɡʌl/;flamingo|火烈鸟|/fləˈmɪŋɡəʊ/",
+        "squirrel|松鼠|/ˈskwɪrəl/;chipmunk|花栗鼠|/ˈtʃɪpmʌŋk/;hedgehog|刺猬|/ˈhedʒhɒɡ/;raccoon|浣熊|/rəˈkuːn/;skunk|臭鼬|/skʌŋk/;badger|獾|/ˈbædʒə/;mole|鼹鼠|/məʊl/;porcupine|豪猪|/ˈpɔːkjupaɪn/;armadillo|犰狳|/ˌɑːməˈdɪləʊ/;platypus|鸭嘴兽|/ˈplætɪpəs/",
+        "spring|春天|/sprɪŋ/;summer|夏天|/ˈsʌmə/;autumn|秋天|/ˈɔːtəm/;winter|冬天|/ˈwɪntə/;storm|暴风雨|/stɔːm/;thunder|雷声|/ˈθʌndə/;lightning|闪电|/ˈlaɪtnɪŋ/;breeze|微风|/briːz/;frost|霜|/frɒst/;hail|冰雹|/heɪl/",
+        "sleet|雨夹雪|/sliːt/;blizzard|暴风雪|/ˈblɪzəd/;tornado|龙卷风|/tɔːˈneɪdəʊ/;hurricane|飓风|/ˈhʌrɪkən/;flood|洪水|/flʌd/;drought|干旱|/draʊt/;sunrise|日出|/ˈsʌnraɪz/;sunset|日落|/ˈsʌnset/;twilight|黄昏|/ˈtwaɪlaɪt/;dawn|黎明|/dɔːn/",
+        "soccer|足球|/ˈsɒkə/;football|橄榄球|/ˈfʊtbɔːl/;baseball|棒球|/ˈbeɪsbɔːl/;basketball|篮球|/ˈbɑːskɪtbɔːl/;tennis|网球|/ˈtenɪs/;golf|高尔夫|/ɡɒlf/;hockey|冰球|/ˈhɒki/;bowling|保龄球|/ˈbəʊlɪŋ/;boxing|拳击|/ˈbɒksɪŋ/;skiing|滑雪|/ˈskiːɪŋ/",
+        "skating|滑冰|/ˈskeɪtɪŋ/;surfing|冲浪|/ˈsɜːfɪŋ/;diving|潜水|/ˈdaɪvɪŋ/;fishing|钓鱼|/ˈfɪʃɪŋ/;camping|露营|/ˈkæmpɪŋ/;hiking|徒步|/ˈhaɪkɪŋ/;cycling|骑行|/ˈsaɪklɪŋ/;jogging|慢跑|/ˈdʒɒɡɪŋ/;rowing|划船|/ˈrəʊɪŋ/;archery|射箭|/ˈɑːtʃəri/",
+        "library|图书馆|/ˈlaɪbrəri/;hospital|医院|/ˈhɒspɪtl/;clinic|诊所|/ˈklɪnɪk/;bank|银行|/bæŋk/;bakery|面包房|/ˈbeɪkəri/;market|市场|/ˈmɑːkɪt/;grocery|杂货店|/ˈɡrəʊsəri/;museum|博物馆|/mjuˈziːəm/;theater|剧院|/ˈθɪətə/;cinema|电影院|/ˈsɪnəmə/",
+        "stadium|体育场|/ˈsteɪdiəm/;airport|机场|/ˈeəpɔːt/;station|车站|/ˈsteɪʃn/;harbor|港口|/ˈhɑːbə/;factory|工厂|/ˈfæktəri/;office|办公室|/ˈɒfɪs/;hotel|酒店|/həʊˈtel/;cafe|咖啡馆|/ˈkæfeɪ/;castle|城堡|/ˈkɑːsl/;palace|宫殿|/ˈpæləs/",
+        "brave|勇敢的|/breɪv/;shy|害羞的|/ʃaɪ/;proud|骄傲的|/praʊd/;calm|平静的|/kɑːm/;scared|害怕的|/skeəd/;excited|兴奋的|/ɪkˈsaɪtɪd/;bored|无聊的|/bɔːd/;tired|累的|/ˈtaɪəd/;hungry|饥饿的|/ˈhʌŋɡri/;thirsty|口渴的|/ˈθɜːsti/",
+        "sleepy|困倦的|/ˈsliːpi/;dizzy|头晕的|/ˈdɪzi/;silly|傻气的|/ˈsɪli/;clever|聪明的|/ˈklevə/;polite|礼貌的|/pəˈlaɪt/;gentle|温柔的|/ˈdʒentl/;honest|诚实的|/ˈɒnɪst/;greedy|贪婪的|/ˈɡriːdi/;jealous|嫉妒的|/ˈdʒeləs/;curious|好奇的|/ˈkjʊəriəs/",
+        "sunflower|向日葵|/ˈsʌnflaʊə/;snowball|雪球|/ˈsnəʊbɔːl/;snowman|雪人|/ˈsnəʊmæn/;raincoat|雨衣|/ˈreɪnkəʊt/;raindrop|雨滴|/ˈreɪndrɒp/;footprint|脚印|/ˈfʊtprɪnt/;handshake|握手|/ˈhændʃeɪk/;toothbrush|牙刷|/ˈtuːθbrʌʃ/;toothpaste|牙膏|/ˈtuːθpeɪst/;hairbrush|发刷|/ˈheəbrʌʃ/",
+        "bathroom|浴室|/ˈbɑːθruːm/;classroom|教室|/ˈklɑːsruːm/;playground|操场|/ˈpleɪɡraʊnd/;lunchbox|午餐盒|/ˈlʌntʃbɒks/;bookshelf|书架|/ˈbʊkʃelf/;doorbell|门铃|/ˈdɔːbel/;mailbox|邮箱|/ˈmeɪlbɒks/;lighthouse|灯塔|/ˈlaɪthaʊs/;windmill|风车|/ˈwɪndmɪl/;waterfall|瀑布|/ˈwɔːtəfɔːl/"
+      ].join(';'),
+
+      // Level C: 25 行 × 10 词 = 严格 250 个不重复小学进阶核心词
+      C: [
+        "mountain|高山|/ˈmaʊntən/;valley|山谷|/ˈvæli/;canyon|峡谷|/ˈkænjən/;desert|沙漠|/ˈdezət/;jungle|丛林|/ˈdʒʌŋɡl/;forest|森林|/ˈfɒrɪst/;meadow|草甸|/ˈmedəʊ/;prairie|大草原|/ˈpreəri/;swamp|沼泽|/swɒmp/;marsh|湿地|/mɑːʃ/",
+        "island|岛屿|/ˈaɪlənd/;beach|海滩|/biːtʃ/;coast|海岸|/kəʊst/;cliff|悬崖|/klɪf/;cave|洞穴|/keɪv/;stream|溪流|/striːm/;creek|小河|/kriːk/;glacier|冰川|/ˈɡlæsiə/;volcano|火山|/vɒlˈkeɪnəʊ/;geyser|间歇泉|/ˈɡiːzə/",
+        "planet|行星|/ˈplænɪt/;earth|地球|/ɜːθ/;mars|火星|/mɑːz/;venus|金星|/ˈviːnəs/;jupiter|木星|/ˈdʒuːpɪtə/;saturn|土星|/ˈsætɜːn/;comet|彗星|/ˈkɒmɪt/;meteor|流星|/ˈmiːtiə/;galaxy|星系|/ˈɡæləksi/;orbit|轨道|/ˈɔːbɪt/",
+        "astronaut|宇航员|/ˈæstrənɔːt/;spaceship|宇宙飞船|/ˈspeɪsʃɪp/;telescope|望远镜|/ˈtelɪskəʊp/;compass|指南针|/ˈkʌmpəs/;magnet|磁铁|/ˈmæɡnət/;battery|电池|/ˈbætəri/;bulb|灯泡|/bʌlb/;wire|电线|/ˈwaɪə/;switch|开关|/swɪtʃ/;engine|引擎|/ˈendʒɪn/",
+        "piano|钢琴|/piˈænəʊ/;violin|小提琴|/ˌvaɪəˈlɪn/;guitar|吉他|/ɡɪˈtɑː/;cello|大提琴|/ˈtʃeləʊ/;harp|竖琴|/hɑːp/;flute|长笛|/fluːt/;trumpet|小号|/ˈtrʌmpɪt/;trombone|长号|/trɒmˈbəʊn/;clarinet|单簧管|/ˌklærəˈnet/;saxophone|萨克斯|/ˈsæksəfəʊn/",
+        "banjo|班卓琴|/ˈbændʒəʊ/;ukulele|尤克里里|/ˌjuːkəˈleɪli/;accordion|手风琴|/əˈkɔːdiən/;xylophone|木琴|/ˈzaɪləfəʊn/;cymbal|镲|/ˈsɪmbl/;tambourine|铃鼓|/ˌtæmbəˈriːn/;whistle|哨子|/ˈwɪsl/;melody|旋律|/ˈmelədi/;rhythm|节奏|/ˈrɪðəm/;concert|音乐会|/ˈkɒnsət/",
+        "painting|油画|/ˈpeɪntɪŋ/;drawing|素描|/ˈdrɔːɪŋ/;statue|雕像|/ˈstætʃuː/;pottery|陶艺|/ˈpɒtəri/;origami|折纸|/ˌɒrɪˈɡɑːmi/;mosaic|马赛克|/məʊˈzeɪɪk/;puppet|木偶|/ˈpʌpɪt/;mask|面具|/mɑːsk/;costume|戏服|/ˈkɒstjuːm/;stage|舞台|/steɪdʒ/",
+        "camera|相机|/ˈkæmərə/;photo|照片|/ˈfəʊtəʊ/;album|相册|/ˈælbəm/;frame|相框|/freɪm/;poster|海报|/ˈpəʊstə/;ticket|门票|/ˈtɪkɪt/;stamp|邮票|/stæmp/;coin|硬币|/kɔɪn/;medal|奖牌|/ˈmedl/;trophy|奖杯|/ˈtrəʊfi/",
+        "hammer|锤子|/ˈhæmə/;nail|钉子|/neɪl/;screw|螺丝|/skruː/;wrench|扳手|/rentʃ/;pliers|钳子|/ˈplaɪəz/;saw|锯子|/sɔː/;drill|电钻|/drɪl/;axe|斧头|/æks/;shovel|铁锹|/ˈʃʌvl/;rake|耙子|/reɪk/",
+        "hoe|锄头|/həʊ/;ladder|梯子|/ˈlædə/;rope|绳子|/rəʊp/;chain|链条|/tʃeɪn/;hook|挂钩|/hʊk/;wheel|车轮|/wiːl/;gear|齿轮|/ɡɪə/;lever|杠杆|/ˈliːvə/;pulley|滑轮|/ˈpʊli/;axle|车轴|/ˈæksl/",
+        "wood|木头|/wʊd/;metal|金属|/ˈmetl/;iron|铁|/ˈaɪən/;steel|钢|/stiːl/;copper|铜|/ˈkɒpə/;silver|银|/ˈsɪlvə/;plastic|塑料|/ˈplæstɪk/;rubber|橡胶|/ˈrʌbə/;glass|玻璃|/ɡlɑːs/;clay|黏土|/kleɪ/",
+        "cotton|棉花|/ˈkɒtn/;wool|羊毛|/wʊl/;silk|丝绸|/sɪlk/;leather|皮革|/ˈleðə/;linen|亚麻|/ˈlɪnɪn/;denim|牛仔布|/ˈdenɪm/;velvet|天鹅绒|/ˈvelvɪt/;brick|砖块|/brɪk/;cement|水泥|/sɪˈment/;marble|大理石|/ˈmɑːbl/",
+        "helmet|头盔|/ˈhelmɪt/;goggles|护目镜|/ˈɡɒɡlz/;bandage|创可贴|/ˈbændɪdʒ/;medicine|药物|/ˈmedsn/;vitamin|维生素|/ˈvɪtəmɪn/;thermometer|温度计|/θəˈmɒmɪtə/;crutch|拐杖|/krʌtʃ/;wheelchair|轮椅|/ˈwiːltʃeə/;stretcher|担架|/ˈstretʃə/;syringe|注射器|/sɪˈrɪndʒ/",
+        "exercise|锻炼|/ˈeksəsaɪz/;stretch|拉伸|/stretʃ/;breathe|呼吸|/briːð/;cough|咳嗽|/kɒf/;sneeze|打喷嚏|/sniːz/;fever|发烧|/ˈfiːvə/;headache|头痛|/ˈhedeɪk/;toothache|牙痛|/ˈtuːθeɪk/;healthy|健康的|/ˈhelθi/;strong|强壮的|/strɒŋ/",
+        "lantern|灯笼|/ˈlæntən/;candle|蜡烛|/ˈkændl/;balloon|气球|/bəˈluːn/;confetti|彩纸屑|/kənˈfeti/;firework|烟花|/ˈfaɪəwɜːk/;parade|游行|/pəˈreɪd/;carnival|嘉年华|/ˈkɑːnɪvl/;festival|节日|/ˈfestɪvl/;holiday|假期|/ˈhɒlədeɪ/;celebrate|庆祝|/ˈselɪbreɪt/",
+        "birthday|生日|/ˈbɜːθdeɪ/;wedding|婚礼|/ˈwedɪŋ/;picnic|野餐|/ˈpɪknɪk/;barbecue|烧烤|/ˈbɑːbɪkjuː/;banquet|宴会|/ˈbæŋkwɪt/;present|礼物|/ˈpreznt/;gift|赠礼|/ɡɪft/;card|贺卡|/kɑːd/;wish|愿望|/wɪʃ/;party|派对|/ˈpɑːti/",
+        "acorn|橡果|/ˈeɪkɔːn/;pinecone|松果|/ˈpaɪnkəʊn/;cactus|仙人掌|/ˈkæktəs/;bamboo|竹子|/ˌbæmˈbuː/;palm|棕榈树|/pɑːm/;oak|橡树|/əʊk/;pine|松树|/paɪn/;maple|枫树|/ˈmeɪpl/;willow|柳树|/ˈwɪləʊ/;birch|桦树|/bɜːtʃ/",
+        "tulip|郁金香|/ˈtjuːlɪp/;orchid|兰花|/ˈɔːkɪd/;lotus|荷花|/ˈləʊtəs/;clover|三叶草|/ˈkləʊvə/;fern|蕨类|/fɜːn/;moss|苔藓|/mɒs/;vine|藤蔓|/vaɪn/;thorn|荆棘|/θɔːn/;petal|花瓣|/ˈpetl/;pollen|花粉|/ˈpɒlən/",
+        "sprout|嫩芽|/spraʊt/;bud|花蕾|/bʌd/;branch|树枝|/brɑːntʃ/;trunk|树干|/trʌŋk/;bark|树皮|/bɑːk/;stump|树桩|/stʌmp/;orchard|果园|/ˈɔːtʃəd/;vineyard|葡萄园|/ˈvɪnjəd/;greenhouse|温室|/ˈɡriːnhaʊs/;harvest|丰收|/ˈhɑːvɪst/",
+        "discover|发现|/dɪˈskʌvə/;explore|探索|/ɪkˈsplɔː/;invent|发明|/ɪnˈvent/;create|创造|/kriˈeɪt/;design|设计|/dɪˈzaɪn/;measure|测量|/ˈmeʒə/;weigh|称重|/weɪ/;compare|比较|/kəmˈpeə/;sort|分类|/sɔːt/;collect|收集|/kəˈlekt/",
+        "protect|保护|/prəˈtekt/;rescue|营救|/ˈreskjuː/;repair|维修|/rɪˈpeə/;recycle|回收|/ˌriːˈsaɪkl/;reuse|再利用|/ˌriːˈjuːz/;reduce|减少|/rɪˈdjuːs/;hydrate|补水|/ˈhaɪdreɪt/;prune|修剪|/pruːn/;bloom|绽放|/bluːm/;whisper|低语|/ˈwɪspə/",
+        "shout|喊叫|/ʃaʊt/;cheer|欢呼|/tʃɪə/;promise|承诺|/ˈprɒmɪs/;forgive|原谅|/fəˈɡɪv/;thank|感谢|/θæŋk/;apologize|道歉|/əˈpɒlədʒaɪz/;invite|邀请|/ɪnˈvaɪt/;welcome|欢迎|/ˈwelkəm/;ancient|古老的|/ˈeɪnʃənt/;modern|现代的|/ˈmɒdn/",
+        "bright|明亮的|/braɪt/;dark|黑暗的|/dɑːk/;shiny|闪亮的|/ˈʃaɪni/;dull|暗淡的|/dʌl/;narrow|狭窄的|/ˈnærəʊ/;broad|宽阔的|/brɔːd/;deep|深的|/diːp/;shallow|浅的|/ˈʃæləʊ/;steep|陡峭的|/stiːp/;flat|平坦的|/flæt/",
+        "curved|弯曲的|/kɜːvd/;straight|笔直的|/streɪt/;hollow|空心的|/ˈhɒləʊ/;solid|坚固的|/ˈsɒlɪd/;fragile|易碎的|/ˈfrædʒaɪl/;flexible|柔韧的|/ˈfleksəbl/;transparent|透明的|/trænsˈpærənt/;colorful|多彩的|/ˈkʌləfl/;calendar|日历|/ˈkælɪndə/;schedule|日程|/ˈʃedjuːl/",
+        "season|季节|/ˈsiːzn/;century|世纪|/ˈsentʃəri/;minute|分钟|/ˈmɪnɪt/;second|秒钟|/ˈsekənd/;hour|小时|/ˈaʊə/;midnight|午夜|/ˈmɪdnaɪt/;weekend|周末|/ˌwiːkˈend/;journey|旅程|/ˈdʒɜːni/;adventure|冒险|/ədˈventʃə/;treasure|宝藏|/ˈtreʒə/"
+      ].join(';'),
+
+      // Levels D–Z: 各预置 10 个起步词（含音标），随时可通过词库管理导入扩充
+      D: "habitat|栖息地|/ˈhæbɪtæt/;predator|捕食者|/ˈpredətə/;prey|猎物|/preɪ/;burrow|洞穴|/ˈbʌrəʊ/;hibernate|冬眠|/ˈhaɪbəneɪt/;migrate|迁徙|/maɪˈɡreɪt/;camouflage|伪装|/ˈkæməflɑːʒ/;mammal|哺乳动物|/ˈmæml/;reptile|爬行动物|/ˈreptaɪl/;fossil|化石|/ˈfɒsl/",
+      E: "neighborhood|社区|/ˈneɪbəhʊd/;volunteer|志愿者|/ˌvɒlənˈtɪə/;citizen|公民|/ˈsɪtɪzn/;courthouse|法院|/ˈkɔːthaʊs/;pharmacy|药房|/ˈfɑːməsi/;sidewalk|人行道|/ˈsaɪdwɔːk/;crosswalk|斑马线|/ˈkrɒswɔːk/;traffic|交通|/ˈtræfɪk/;postoffice|邮局|/ˈpəʊstˌɒfɪs/;shelter|收容所|/ˈʃeltə/",
+      F: "atmosphere|大气层|/ˈætməsfɪə/;evaporation|蒸发|/ɪˌvæpəˈreɪʃn/;condensation|凝结|/ˌkɒndenˈseɪʃn/;precipitation|降水|/prɪˌsɪpɪˈteɪʃn/;forecast|预报|/ˈfɔːkɑːst/;temperature|温度|/ˈtemprətʃə/;humidity|湿度|/hjuːˈmɪdəti/;barometer|气压计|/bəˈrɒmɪtə/;climate|气候|/ˈklaɪmət/;equator|赤道|/ɪˈkweɪtə/",
+      G: "constellation|星座|/ˌkɒnstəˈleɪʃn/;satellite|人造卫星|/ˈsætəlaɪt/;asteroid|小行星|/ˈæstərɔɪd/;crater|陨石坑|/ˈkreɪtə/;gravity|重力|/ˈɡrævəti/;eclipse|日食|/ɪˈklɪps/;nebula|星云|/ˈnebjələ/;observatory|天文台|/əbˈzɜːvətri/;universe|宇宙|/ˈjuːnɪvɜːs/;supernova|超新星|/ˌsuːpəˈnəʊvə/",
+      H: "orchestra|交响乐团|/ˈɔːkɪstrə/;conductor|指挥家|/kənˈdʌktə/;symphony|交响曲|/ˈsɪmfəni/;composer|作曲家|/kəmˈpəʊzə/;sculpture|雕塑|/ˈskʌlptʃə/;gallery|画廊|/ˈɡæləri/;canvas|画布|/ˈkænvəs/;palette|调色板|/ˈpælət/;architecture|建筑|/ˈɑːkɪtektʃə/;opera|歌剧|/ˈɒprə/",
+      I: "nutrition|营养|/njuˈtrɪʃn/;protein|蛋白质|/ˈprəʊtiːn/;calcium|钙质|/ˈkælsiəm/;grain|谷物|/ɡreɪn/;dairy|乳制品|/ˈdeəri/;digestion|消化|/daɪˈdʒestʃən/;skeleton|骨骼|/ˈskelɪtn/;muscle|肌肉|/ˈmʌsl/;oxygen|氧气|/ˈɒksɪdʒən/;lungs|肺部|/lʌŋz/",
+      J: "magma|岩浆|/ˈmæɡmə/;lava|熔岩|/ˈlɑːvə/;earthquake|地震|/ˈɜːθkweɪk/;iceberg|冰山|/ˈaɪsbɜːɡ/;plateau|高原|/ˈplætəʊ/;peninsula|半岛|/pəˈnɪnsjələ/;archipelago|群岛|/ˌɑːkɪˈpeləɡəʊ/;oasis|绿洲|/əʊˈeɪsɪs/;delta|三角洲|/ˈdeltə/;fjord|峡湾|/fjɔːd/",
+      K: "electricity|电|/ɪˌlekˈtrɪsəti/;circuit|电路|/ˈsɜːkɪt/;conductor|导体|/kənˈdʌktə/;insulator|绝缘体|/ˈɪnsjuleɪtə/;magnetism|磁力|/ˈmæɡnətɪzəm/;friction|摩擦力|/ˈfrɪkʃn/;pendulum|钟摆|/ˈpendjələm/;prism|三棱镜|/ˈprɪzəm/;spectrum|光谱|/ˈspektrəm/;refraction|折射|/rɪˈfrækʃn/",
+      L: "photosynthesis|光合作用|/ˌfəʊtəʊˈsɪnθəsɪs/;chlorophyll|叶绿素|/ˈklɒrəfɪl/;pollination|授粉|/ˌpɒləˈneɪʃn/;germination|发芽|/ˌdʒɜːmɪˈneɪʃn/;erosion|侵蚀|/ɪˈrəʊʒn/;sediment|沉积物|/ˈsedɪmənt/;mineral|矿物|/ˈmɪnərəl/;crystal|水晶|/ˈkrɪstl/;granite|花岗岩|/ˈɡrænɪt/;amber|琥珀|/ˈæmbə/",
+      M: "submarine|潜水艇|/ˌsʌbməˈriːn/;locomotive|火车头|/ˌləʊkəˈməʊtɪv/;hovercraft|气垫船|/ˈhɒvəkrɑːft/;glider|滑翔机|/ˈɡlaɪdə/;parachute|降落伞|/ˈpærəʃuːt/;turbine|涡轮机|/ˈtɜːbaɪn/;propeller|螺旋桨|/prəˈpelə/;radar|雷达|/ˈreɪdɑː/;microscope|显微镜|/ˈmaɪkrəskəʊp/;microchip|微芯片|/ˈmaɪkrəʊtʃɪp/",
+      N: "archaeology|考古学|/ˌɑːkiˈɒlədʒi/;pyramid|金字塔|/ˈpɪrəmɪd/;pharaoh|法老|/ˈfeərəʊ/;sphinx|狮身人面像|/sfɪŋks/;colosseum|斗兽场|/ˌkɒləˈsiːəm/;aqueduct|高架渠|/ˈækwɪdʌkt/;cathedral|大教堂|/kəˈθiːdrəl/;pagoda|宝塔|/pəˈɡəʊdə/;parchment|羊皮纸|/ˈpɑːtʃmənt/;chariot|战车|/ˈtʃæriət/",
+      O: "ecosystem|生态系统|/ˈiːkəʊsɪstəm/;biodiversity|生物多样性|/ˌbaɪəʊdaɪˈvɜːsəti/;herbivore|食草动物|/ˈhɜːbɪvɔː/;carnivore|食肉动物|/ˈkɑːnɪvɔː/;omnivore|杂食动物|/ˈɒmnɪvɔː/;vertebrate|脊椎动物|/ˈvɜːtɪbrət/;nocturnal|夜行的|/nɒkˈtɜːnl/;endangered|濒危的|/ɪnˈdeɪndʒəd/;extinct|灭绝的|/ɪkˈstɪŋkt/;sanctuary|保护区|/ˈsæŋktʃuəri/",
+      P: "momentum|动量|/məˈmentəm/;inertia|惯性|/ɪˈnɜːʃə/;velocity|速度|/vəˈlɒsəti/;voltage|电压|/ˈvəʊltɪdʒ/;generator|发电机|/ˈdʒenəreɪtə/;solar|太阳能|/ˈsəʊlə/;geothermal|地热的|/ˌdʒiːəʊˈθɜːml/;hydropower|水力发电|/ˈhaɪdrəʊpaʊə/;buoyancy|浮力|/ˈbɔɪənsi/;aerodynamics|空气动力学|/ˌeərəʊdaɪˈnæmɪks/",
+      Q: "sustainability|可持续发展|/səˌsteɪnəˈbɪləti/;conservation|自然保护|/ˌkɒnsəˈveɪʃn/;deforestation|森林砍伐|/ˌdiːˌfɒrɪˈsteɪʃn/;urbanization|城市化|/ˌɜːbənaɪˈzeɪʃn/;agriculture|农业|/ˈæɡrɪkʌltʃə/;irrigation|灌溉|/ˌɪrɪˈɡeɪʃn/;terrace|梯田|/ˈterəs/;reservoir|水库|/ˈrezəvwɑː/;mangrove|红树林|/ˈmæŋɡrəʊv/;tundra|苔原|/ˈtʌndrə/",
+      R: "democracy|民主|/dɪˈmɒkrəsi/;republic|共和国|/rɪˈpʌblɪk/;constitution|宪法|/ˌkɒnstɪˈtjuːʃn/;parliament|议会|/ˈpɑːləmənt/;senate|参议院|/ˈsenət/;judiciary|司法机关|/dʒuˈdɪʃəri/;legislation|立法|/ˌledʒɪsˈleɪʃn/;amendment|修正案|/əˈmendmənt/;diplomacy|外交|/dɪˈpləʊməsi/;treaty|条约|/ˈtriːti/",
+      S: "metamorphosis|变态发育|/ˌmetəˈmɔːfəsɪs/;symbiosis|共生关系|/ˌsɪmbaɪˈəʊsɪs/;osmosis|渗透作用|/ɒzˈməʊsɪs/;mitosis|有丝分裂|/maɪˈtəʊsɪs/;chromosome|染色体|/ˈkrəʊməsəʊm/;genetics|遗传学|/dʒəˈnetɪks/;mutation|变异|/mjuːˈteɪʃn/;evolution|进化|/ˌiːvəˈluːʃn/;bacteria|细菌|/bækˈtɪəriə/;neuron|神经元|/ˈnjʊərɒn/",
+      T: "equilibrium|平衡状态|/ˌiːkwɪˈlɪbriəm/;entropy|熵|/ˈentrəpi/;catalyst|催化剂|/ˈkætəlɪst/;molecule|分子|/ˈmɒlɪkjuːl/;isotope|同位素|/ˈaɪsətəʊp/;electron|电子|/ɪˈlektrɒn/;proton|质子|/ˈprəʊtɒn/;combustion|燃烧|/kəmˈbʌstʃən/;semiconductor|半导体|/ˌsemikənˈdʌktə/;quantum|量子|/ˈkwɒntəm/",
+      U: "hypothesis|假设|/haɪˈpɒθəsɪs/;experiment|实验|/ɪkˈsperɪmənt/;variable|变量|/ˈveəriəbl/;inference|推断|/ˈɪnfərəns/;algorithm|算法|/ˈælɡərɪðəm/;simulation|模拟|/ˌsɪmjuˈleɪʃn/;prototype|原型|/ˈprəʊtətaɪp/;theorem|定理|/ˈθɪərəm/;geometry|几何学|/dʒiˈɒmətri/;fractal|分形|/ˈfræktl/",
+      V: "metaphor|隐喻|/ˈmetəfə/;allegory|寓言|/ˈæləɡəri/;symbolism|象征主义|/ˈsɪmbəlɪzəm/;irony|反讽|/ˈaɪrəni/;satire|讽刺|/ˈsætaɪə/;protagonist|主角|/prəˈtæɡənɪst/;sonnet|十四行诗|/ˈsɒnɪt/;biography|传记|/baɪˈɒɡrəfi/;manuscript|手稿|/ˈmænjuskrɪpt/;calligraphy|书法|/kəˈlɪɡrəfi/",
+      W: "perseverance|毅力|/ˌpɜːsɪˈvɪərəns/;resilience|韧性|/rɪˈzɪliəns/;empathy|同理心|/ˈempəθi/;integrity|正直|/ɪnˈteɡrəti/;humility|谦逊|/hjuːˈmɪləti/;gratitude|感恩|/ˈɡrætɪtjuːd/;altruism|利他主义|/ˈæltruɪzəm/;solidarity|团结|/ˌsɒlɪˈdærəti/;consensus|共识|/kənˈsensəs/;innovation|创新|/ˌɪnəˈveɪʃn/",
+      X: "symmetry|对称美|/ˈsɪmətri/;perspective|透视法|/pəˈspektɪv/;renaissance|文艺复兴|/rɪˈneɪsns/;baroque|巴洛克|/bəˈrɒk/;gothic|哥特式|/ˈɡɒθɪk/;impressionism|印象派|/ɪmˈpreʃənɪzəm/;surrealism|超现实主义|/səˈrɪəlɪzəm/;fresco|湿壁画|/ˈfreskəʊ/;porcelain|瓷器|/ˈpɔːsəlɪn/;obelisk|方尖碑|/ˈɒbəlɪsk/",
+      Y: "economy|经济|/ɪˈkɒnəmi/;inflation|通货膨胀|/ɪnˈfleɪʃn/;recession|经济衰退|/rɪˈseʃn/;monopoly|垄断|/məˈnɒpəli/;tariff|关税|/ˈtærɪf/;subsidy|补贴|/ˈsʌbsədi/;currency|货币|/ˈkʌrənsi/;logistics|物流|/ləˈdʒɪstɪks/;infrastructure|基础设施|/ˈɪnfrəstrʌktʃə/;patent|专利|/ˈpætnt/",
+      Z: "sovereignty|主权|/ˈsɒvrənti/;geopolitics|地缘政治|/ˌdʒiːəʊˈpɒlətɪks/;jurisprudence|法理学|/ˌdʒʊərɪsˈpruːdns/;philosophy|哲学|/fəˈlɒsəfi/;humanism|人文主义|/ˈhjuːmənɪzəm/;enlightenment|启蒙运动|/ɪnˈlaɪtnmənt/;pluralism|多元主义|/ˈplʊərəlɪzəm/;paradigm|范式|/ˈpærədaɪm/;aesthetics|美学|/iːsˈθetɪks/;linguistics|语言学|/lɪŋˈɡwɪstɪks/"
+    };
+
+    /* =========================================================================
+       2. IndexedDB 持久化引擎 (RAZ_Adventure_Pro_DB)
+       Stores: words, srs, photos, meta
+    ========================================================================= */
+    const DB_NAME = 'RAZ_Adventure_Pro_DB';
+    const SEED_VERSION = 2;
+    let db = null;
+
+    const app = {
+      wordsByLevel: {},
+      wordMap: new Map(),
+      srsMap: new Map(),
+      photoCache: new Map(),
+      meta: {
+        seedVersion: 0,
+        unlockedIdx: 0,
+        parentMode: false,
+        sound: true,
+        stars: 0,
+        alarmEnabled: true,
+        alarmTime: localStorage.getItem('raz_alarm_time') || '19:30',
+        alarmLastDate: ''
+      }
+    };
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = (e) => {
+          const d = e.target.result;
+          if (!d.objectStoreNames.contains('words')) d.createObjectStore('words', { keyPath: 'id' });
+          if (!d.objectStoreNames.contains('srs')) d.createObjectStore('srs', { keyPath: 'id' });
+          if (!d.objectStoreNames.contains('photos')) d.createObjectStore('photos', { keyPath: 'word' });
+          if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta', { keyPath: 'key' });
+        };
+        req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+        req.onerror = (e) => reject(e.target.error);
+      });
+    }
+
+    const idbAll = (s) => new Promise((res, rej) => { const r = db.transaction(s, 'readonly').objectStore(s).getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error); });
+    const idbPut = (s, v) => new Promise((res, rej) => { const tx = db.transaction(s, 'readwrite'); tx.objectStore(s).put(v); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+    const idbBulkPut = (s, arr) => new Promise((res, rej) => { const tx = db.transaction(s, 'readwrite'); const st = tx.objectStore(s); arr.forEach(v => st.put(v)); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+    const idbBulkDel = (s, keys) => new Promise((res, rej) => { const tx = db.transaction(s, 'readwrite'); const st = tx.objectStore(s); keys.forEach(k => st.delete(k)); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+    const saveMeta = () => idbPut('meta', { key: 'settings', value: app.meta }).catch(() => {});
+
+    function rebuildIndexes(words) {
+      app.wordsByLevel = {};
+      LEVELS.forEach(l => app.wordsByLevel[l] = []);
+      app.wordMap.clear();
+      words.forEach(w => {
+        if (!app.wordsByLevel[w.level]) app.wordsByLevel[w.level] = [];
+        app.wordsByLevel[w.level].push(w);
+        app.wordMap.set(w.id, w);
+      });
+    }
+
+    async function bootApp() {
+      try {
+        await openDB();
+        const metaRows = await idbAll('meta');
+        const saved = metaRows.find(r => r.key === 'settings')?.value;
+        if (saved) app.meta = { ...app.meta, ...saved };
+
+        let words = await idbAll('words');
+        const existingMap = new Map(words.map(w => [w.id, w]));
+
+        // 首次启动或升级词库版本时，写入 aa-C 1000 词 + D-Z 起步词（保留用户已有掌握记录）
+        if ((app.meta.seedVersion || 0) < SEED_VERSION || words.length < 1000) {
+          const toPut = [];
+          LEVELS.forEach(lvl => {
+            const seen = new Set();
+            (SEED_VOCAB[lvl] || '').split(';').forEach(entry => {
+              const parts = entry.split('|');
+              if (parts.length < 2) return;
+              const en = parts[0].trim();
+              const zh = parts[1].trim();
+              const phonetic = (parts[2] || '').trim();
+              const key = en.toLowerCase();
+              if (!en || !zh || seen.has(key)) return;
+              seen.add(key);
+              const id = `${lvl}:${key}`;
+              const prev = existingMap.get(id);
+              const merged = prev
+                ? { ...prev, zh: prev.zh || zh, phonetic: prev.phonetic || phonetic }
+                : { id, level: lvl, en, zh, phonetic, imageUrl: '', mastered: false, wrongCount: 0 };
+              toPut.push(merged);
+              existingMap.set(id, merged);
+            });
+          });
+          if (toPut.length) {
+            await idbBulkPut('words', toPut);
+            words = Array.from(existingMap.values());
+          }
+          app.meta.seedVersion = SEED_VERSION;
+          await saveMeta();
+        }
+
+        rebuildIndexes(words);
+        (await idbAll('srs')).forEach(r => app.srsMap.set(r.id, r));
+        (await idbAll('photos')).forEach(r => app.photoCache.set(r.word, { urls: r.urls || [], idx: r.idx || 0 }));
+
+        document.getElementById('alarm-time').value = app.meta.alarmTime;
+        document.getElementById('alarm-enabled').checked = !!app.meta.alarmEnabled;
+        populatePkLevelDropdown();
+        renderAdventureMap();
+        startAlarmTicker();
+      } catch (err) {
+        console.error(err);
+        showToast('数据库初始化失败，请刷新重试', 'error');
+      } finally {
+        document.getElementById('boot-overlay').classList.add('hidden');
+      }
+    }
+
+    /* =========================================================================
+       3. 真实摄影照片自动匹配引擎 (Wikimedia Commons + 实景兜底 + IndexedDB 缓存)
+    ========================================================================= */
+    const photoPending = new Map();
+
+    function loremPhoto(word, seed = 1) {
+      return `https://loremflickr.com/600/400/${encodeURIComponent(word)}/all?lock=${seed}`;
+    }
+
+    async function resolveRealPhoto(wordObj, forceNext = false) {
+      if (wordObj.imageUrl && wordObj.imageUrl.startsWith('http') && !forceNext) {
+        return wordObj.imageUrl;
+      }
+      const key = wordObj.en.toLowerCase().trim();
+      let cached = app.photoCache.get(key);
+
+      if (cached && cached.urls.length > 0 && !forceNext) {
+        return cached.urls[cached.idx % cached.urls.length];
+      }
+
+      if (cached && forceNext) {
+        cached.idx = (cached.idx + 1) % (cached.urls.length + 1);
+        if (cached.idx < cached.urls.length) {
+          idbPut('photos', { word: key, urls: cached.urls, idx: cached.idx }).catch(() => {});
+          return cached.urls[cached.idx];
+        }
+        return loremPhoto(wordObj.en, Math.floor(Math.random() * 900) + 10);
+      }
+
+      if (photoPending.has(key)) return photoPending.get(key);
+
+      const p = (async () => {
+        const urls = [];
+        try {
+          const api = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(wordObj.en + ' photo')}&gsrlimit=5&prop=imageinfo&iiprop=url&iiurlwidth=600&format=json&origin=*`;
+          const res = await fetch(api);
+          if (res.ok) {
+            const data = await res.json();
+            const pages = data?.query?.pages;
+            if (pages) {
+              Object.values(pages).forEach(pg => {
+                const title = (pg.title || '').toLowerCase();
+                const u = pg?.imageinfo?.[0]?.thumburl || pg?.imageinfo?.[0]?.url || '';
+                const lu = u.toLowerCase();
+                const isRaster = /\.(jpg|jpeg|png)(\?|$)/i.test(lu) || lu.includes('.jpg/') || lu.includes('.jpeg/');
+                const notNonPhoto = !title.includes('icon') && !title.includes('logo') && !title.includes('diagram') && !title.includes('map') && !title.includes('chart') && !lu.endsWith('.svg');
+                if (u && isRaster && notNonPhoto) urls.push(u);
+              });
+            }
+          }
+        } catch (e) {} finally { photoPending.delete(key); }
+
+        if (urls.length === 0) urls.push(loremPhoto(wordObj.en, key.length * 17 + 3));
+        const entry = { word: key, urls: Array.from(new Set(urls)), idx: 0 };
+        app.photoCache.set(key, entry);
+        idbPut('photos', entry).catch(() => {});
+        return entry.urls[0];
+      })();
+
+      photoPending.set(key, p);
+      return p;
+    }
+
+    function bindRealPhoto(imgId, wordObj, forceNext = false) {
+      const img = document.getElementById(imgId);
+      if (!img) return;
+      img.classList.add('photo-skeleton');
+      resolveRealPhoto(wordObj, forceNext).then(url => {
+        const el = document.getElementById(imgId);
+        if (!el) return;
+        el.onload = () => el.classList.remove('photo-skeleton');
+        el.onerror = () => {
+          el.onerror = null;
+          el.classList.remove('photo-skeleton');
+          el.src = `https://placehold.co/600x400/FEF3C7/92400E?text=${encodeURIComponent(wordObj.en)}`;
+        };
+        el.src = url;
+      });
+    }
+
+    function switchCardPhoto(imgId, wordId) {
+      const w = app.wordMap.get(wordId);
+      if (w) { bindRealPhoto(imgId, w, true); showToast('正在切换真实摄影图...', 'info'); }
+    }
+
+    /* =========================================================================
+       4. 音效 (Web Audio API)、TTS 发音、礼花彩带、通用工具
+    ========================================================================= */
+    let audioCtx = null;
+    function playSFX(type) {
+      if (!app.meta.sound) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioCtx.currentTime;
+        const beep = (f, t, d, w = 'triangle', v = 0.15) => {
+          const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+          o.type = w; o.frequency.setValueAtTime(f, now + t);
+          g.gain.setValueAtTime(v, now + t); g.gain.exponentialRampToValueAtTime(0.001, now + t + d);
+          o.connect(g); g.connect(audioCtx.destination); o.start(now + t); o.stop(now + t + d + 0.02);
+        };
+        if (type === 'ok') { beep(523, 0, 0.14); beep(659, 0.06, 0.14); beep(784, 0.12, 0.2); }
+        else if (type === 'combo') { beep(587, 0, 0.12); beep(784, 0.06, 0.12); beep(1046, 0.12, 0.24); }
+        else if (type === 'bad') { beep(195, 0, 0.15, 'sawtooth', 0.11); beep(140, 0.09, 0.2, 'sawtooth', 0.11); }
+        else if (type === 'boss') { [392, 523, 659, 784, 1046].forEach((f, i) => beep(f, i * 0.08, 0.25, 'triangle', 0.18)); }
+        else if (type === 'pk') { beep(660, 0, 0.1, 'sine', 0.18); beep(990, 0.06, 0.2, 'triangle', 0.2); }
+        else if (type === 'win') { [523, 659, 784, 1046].forEach((f, i) => beep(f, i * 0.09, 0.3)); }
+        else if (type === 'alarm') { [880, 1046, 1318, 1568].forEach((f, i) => beep(f, i * 0.14, 0.35, 'sine', 0.15)); }
+      } catch (e) {}
+    }
+
+    function speakText(text, lang = 'en-US', rate = 0.9) {
+      if (!('speechSynthesis' in window)) return;
+      try {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = lang; u.rate = rate;
+        window.speechSynthesis.speak(u);
+      } catch (e) {}
+    }
+
+    function toggleSound() {
+      app.meta.sound = !app.meta.sound;
+      saveMeta();
+      document.getElementById('icon-sound').textContent = app.meta.sound ? '🔊' : '🔇';
+      showToast(app.meta.sound ? '🔊 音效已开启' : '🔇 已静音', 'info');
+    }
+
+    function showToast(msg, type = 'info') {
+      const box = document.getElementById('toast-container');
+      const d = document.createElement('div');
+      const cls = { info: 'bg-slate-800', success: 'bg-emerald-600', warn: 'bg-amber-500', error: 'bg-rose-600' };
+      d.className = `${cls[type] || cls.info} text-white px-5 py-2.5 rounded-2xl shadow-lg font-bold text-sm animate-pop text-center`;
+      d.textContent = msg;
+      box.appendChild(d);
+      setTimeout(() => { d.style.opacity = '0'; d.style.transition = 'opacity 0.25s'; setTimeout(() => d.remove(), 260); }, 2300);
+    }
+
+    let confetti = [], cRun = false;
+    function launchConfetti(n = 65) {
+      const c = document.getElementById('confetti-canvas'), ctx = c.getContext('2d');
+      c.width = window.innerWidth; c.height = window.innerHeight;
+      const cols = ['#FF6B57', '#FFB800', '#10B981', '#3B82F6', '#A855F7'];
+      for (let i = 0; i < n; i++) confetti.push({ x: Math.random() * c.width, y: -10, vx: (Math.random() - 0.5) * 6, vy: 3 + Math.random() * 5, s: 6 + Math.random() * 5, col: cols[i % cols.length], r: Math.random() * 360, vr: (Math.random() - 0.5) * 12 });
+      if (cRun) return; cRun = true;
+      const tick = () => {
+        ctx.clearRect(0, 0, c.width, c.height);
+        confetti.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.08; p.r += p.vr; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r * Math.PI / 180); ctx.fillStyle = p.col; ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.6); ctx.restore(); });
+        confetti = confetti.filter(p => p.y < c.height + 20);
+        if (confetti.length) requestAnimationFrame(tick); else { cRun = false; ctx.clearRect(0, 0, c.width, c.height); }
+      };
+      requestAnimationFrame(tick);
+    }
+
+    const shuffle = (arr) => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+    const openModal = (id) => document.getElementById(id).classList.remove('hidden');
+    const closeModal = (id) => document.getElementById(id).classList.add('hidden');
+
+    /* =========================================================================
+       5. 艾宾浩斯遗忘曲线 SRS 引擎 (+1天, +2天, +4天, +7天, +15天, +30天)
+    ========================================================================= */
+    const SRS_DAYS = [0, 1, 2, 4, 7, 15, 30];
+    const DAY_MS = 86400000;
+
+    function recordSrs(wordObj, ok) {
+      const now = Date.now();
+      let r = app.srsMap.get(wordObj.id) || { id: wordObj.id, level: wordObj.level, en: wordObj.en, zh: wordObj.zh, stage: 0, nextReviewAt: now + DAY_MS };
+      if (ok) {
+        r.stage = Math.min(7, (r.stage || 0) + 1);
+        const days = r.stage >= 7 ? 3650 : SRS_DAYS[r.stage];
+        r.nextReviewAt = now + days * DAY_MS;
+      } else {
+        r.stage = 1;
+        r.nextReviewAt = now + DAY_MS;
+      }
+      r.lastAt = now;
+      app.srsMap.set(wordObj.id, r);
+      idbPut('srs', r).catch(() => {});
+      updateSrsBadge();
+    }
+
+    function getDueSrsWords() {
+      const now = Date.now(), due = [];
+      app.srsMap.forEach(r => {
+        if (r.stage < 7 && r.nextReviewAt <= now) {
+          const w = app.wordMap.get(r.id);
+          if (w) due.push({ ...w, srs: r });
+        }
+      });
+      return due.sort((a, b) => a.srs.nextReviewAt - b.srs.nextReviewAt);
+    }
+
+    function updateSrsBadge() {
+      const cnt = getDueSrsWords().length;
+      const b = document.getElementById('hud-srs-badge');
+      b.textContent = cnt > 99 ? '99+' : cnt;
+      b.classList.toggle('hidden', cnt === 0);
+      const md = document.getElementById('map-srs-due');
+      if (md) md.textContent = cnt;
+    }
+
+    /* =========================================================================
+       6. 视图切换与 27 关冒险地图
+    ========================================================================= */
+    const VIEWS = ['view-map', 'view-game', 'view-summary', 'view-pk-setup', 'view-pk-arena', 'view-pk-podium', 'view-srs', 'view-album'];
+
+    function switchView(id) {
+      VIEWS.forEach(v => document.getElementById(v).classList.toggle('hidden', v !== id));
+      document.getElementById('main-header').classList.toggle('hidden', id === 'view-pk-arena');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function updateHUD() {
+      const all = Array.from(app.wordMap.values());
+      document.getElementById('hud-total-words').textContent = `总词库: ${all.length}`;
+      document.getElementById('hud-stars').textContent = `★ ${app.meta.stars}`;
+      document.getElementById('toggle-parent-mode').checked = !!app.meta.parentMode;
+      const mob = document.getElementById('toggle-parent-mobile');
+      if (mob) mob.checked = !!app.meta.parentMode;
+      document.getElementById('icon-sound').textContent = app.meta.sound ? '🔊' : '🔇';
+      updateSrsBadge();
+    }
+
+    function toggleParentMode(on) {
+      app.meta.parentMode = on;
+      saveMeta();
+      renderAdventureMap();
+      showToast(on ? '🔓 家长/测试模式已开启：全 27 关已解锁' : '🔒 已切换回逐级闯关模式', 'info');
+    }
+
+    function renderAdventureMap() {
+      updateHUD();
+      const all = Array.from(app.wordMap.values());
+      const mastered = all.filter(w => w.mastered).length;
+      document.getElementById('map-mastered').textContent = mastered;
+      document.getElementById('map-total').textContent = all.length;
+      document.getElementById('map-stars').textContent = app.meta.stars;
+      document.getElementById('map-progress-bar').style.width = `${all.length ? Math.round(mastered / all.length * 100) : 0}%`;
+
+      const container = document.getElementById('map-zones');
+      container.innerHTML = ZONES.map(z => {
+        const cards = z.levels.map(lvl => {
+          const idx = LEVELS.indexOf(lvl);
+          const unlocked = app.meta.parentMode || idx <= app.meta.unlockedIdx;
+          const ws = app.wordsByLevel[lvl] || [];
+          const m = ws.filter(w => w.mastered).length;
+          const pct = ws.length ? Math.round(m / ws.length * 100) : 0;
+          const isCur = idx === app.meta.unlockedIdx && !app.meta.parentMode;
+          return `
+            <button onclick="${unlocked ? `openLaunch('${lvl}')` : `showToast('请先完成前一级，或开启右上角“家长模式”', 'warn')`}"
+              class="btn-3d relative text-left rounded-3xl p-4 flex flex-col justify-between min-h-[138px] ${unlocked ? 'bg-white hover:shadow-lg border-2 ' + (isCur ? 'border-coral ring-4 ring-orange-200/70' : 'border-white hover:border-amber-300 shadow-sm') : 'bg-white/55 border border-slate-200 opacity-75'}">
+              ${isCur ? `<span class="absolute -top-2.5 right-3 bg-coral text-white text-[10px] font-black px-2.5 py-0.5 rounded-full">当前</span>` : ''}
+              <div class="flex items-start justify-between w-full">
+                <div class="w-11 h-11 rounded-2xl flex items-center justify-center font-black text-xl ${unlocked ? (pct === 100 && ws.length ? 'bg-emerald-500 text-white' : 'bg-gradient-to-br from-amber-400 to-orange-500 text-white') : 'bg-slate-200 text-slate-400'}">${unlocked ? lvl : '🔒'}</div>
+                <span class="px-2 py-0.5 rounded-lg ${ws.length >= 100 ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'} text-[11px] font-extrabold">${ws.length}词</span>
+              </div>
+              <div class="mt-3 w-full">
+                <div class="flex justify-between text-xs font-extrabold text-slate-700 mb-1">
+                  <span>Level ${lvl}</span><span class="text-amber-600">${m}/${ws.length}</span>
+                </div>
+                <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div class="h-full ${pct === 100 && ws.length ? 'bg-emerald-400' : 'bg-amber-400'} rounded-full" style="width:${pct}%"></div>
+                </div>
+              </div>
+            </button>`;
+        }).join('');
+        return `
+          <section class="bg-gradient-to-br ${z.grad} rounded-3xl p-5 sm:p-6 border ${z.border} shadow-sm">
+            <div class="flex items-center gap-2.5 mb-4">
+              <h3 class="font-black text-slate-800 text-lg sm:text-xl">${z.name}</h3>
+              <span class="px-2.5 py-0.5 rounded-full bg-white/85 text-slate-600 font-extrabold text-xs border border-slate-200/60">${z.badge}</span>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3.5">${cards}</div>
+          </section>`;
+      }).join('');
+    }
+
+    function goHomeMap() {
+      stopMic();
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      game = null; pk = null;
+      switchView('view-map');
+      renderAdventureMap();
+    }
+
+    /* =========================================================================
+       7. 单人闯关引擎 (3 大题型 + 语音评分 + 键盘兜底 + 错词 Boss 战 + 迷你故事)
+    ========================================================================= */
+    let launchLevel = 'aa', launchMode = 'mixed', game = null, recog = null, micOn = false;
+
+    function openLaunch(lvl) {
+      launchLevel = lvl;
+      const ws = app.wordsByLevel[lvl] || [];
+      const m = ws.filter(w => w.mastered).length;
+      document.getElementById('launch-badge').textContent = lvl;
+      document.getElementById('launch-title').textContent = `Level ${lvl} 单词岛`;
+      document.getElementById('launch-sub').textContent = `已掌握 ${m} / ${ws.length} 词 · 每轮智能练习 10 词`;
+      setLaunchMode(launchMode);
+      openModal('modal-launch');
+    }
+
+    function setLaunchMode(m) {
+      launchMode = m;
+      ['mixed', 'choice', 'photo', 'bilingual'].forEach(k => {
+        const el = document.getElementById(`lm-${k}`);
+        el.className = `btn-3d min-h-[52px] rounded-2xl border-2 font-extrabold text-sm ${k === m ? 'border-coral bg-orange-50 text-coral' : 'border-slate-200 bg-slate-50 text-slate-600'}`;
+      });
+    }
+
+    function startLevelBatchRound(randomAll) {
+      closeModal('modal-launch');
+      const ws = app.wordsByLevel[launchLevel] || [];
+      if (!ws.length) return showToast('该级别暂无单词，请先在词库管理中导入', 'warn');
+      let picked;
+      if (randomAll) {
+        picked = shuffle(ws).slice(0, Math.min(10, ws.length));
+      } else {
+        const unmastered = ws.filter(w => !w.mastered);
+        const pool = unmastered.length >= 10 ? unmastered : unmastered.concat(shuffle(ws.filter(w => w.mastered)));
+        picked = shuffle(pool.slice(0, Math.min(10, pool.length)));
+      }
+      launchGame({ level: launchLevel, words: picked, mode: launchMode, isSrs: false, title: `Level ${launchLevel} · 闯关 (${picked.length}词)` });
+    }
+
+    function launchGame({ level, words, mode, isSrs, title }) {
+      const cycle = ['mc_en_zh', 'photo_en', 'mc_zh_en', 'voice_en_zh', 'voice_zh_en'];
+      const questions = words.map((w, i) => {
+        let type = cycle[i % cycle.length];
+        if (mode === 'choice') type = i % 2 === 0 ? 'mc_en_zh' : 'mc_zh_en';
+        else if (mode === 'photo') type = 'photo_en';
+        else if (mode === 'bilingual') type = i % 2 === 0 ? 'voice_en_zh' : 'voice_zh_en';
+        return { w, type };
+      });
+
+      game = {
+        level, words, mode, isSrs, title, questions,
+        idx: 0, phase: 'normal', wrongMap: new Map(), bossQ: [], bossMax: 0,
+        combo: 0, maxCombo: 0, okCnt: 0, totalCnt: 0, answered: false, showKeyFallback: false
+      };
+      document.getElementById('game-title').textContent = title;
+      document.getElementById('boss-banner').classList.add('hidden');
+      switchView('view-game');
+      renderQuestion();
+    }
+
+    function currentQ() { return !game ? null : (game.phase === 'normal' ? game.questions[game.idx] : game.bossQ[0]); }
+
+    function getDistractors(target, n = 3) {
+      const same = (app.wordsByLevel[target.level] || []).filter(w => w.id !== target.id);
+      let pool = shuffle(same);
+      if (pool.length < n) pool = pool.concat(shuffle(Array.from(app.wordMap.values()).filter(w => w.id !== target.id)));
+      return pool.slice(0, n);
+    }
+
+    function updateGameBars() {
+      document.getElementById('game-wrong-count').textContent = game.wrongMap.size;
+      document.getElementById('combo-label').textContent = `连击: ${game.combo}`;
+      document.getElementById('combo-fill').style.width = `${Math.min(100, game.combo * 20)}%`;
+      const fever = game.combo >= 3;
+      document.getElementById('fever-badge').classList.toggle('hidden', !fever);
+      document.getElementById('combo-wrapper').classList.toggle('fever-glow', fever);
+
+      if (game.phase === 'normal') {
+        document.getElementById('game-progress-text').textContent = `${Math.min(game.idx + 1, game.questions.length)} / ${game.questions.length}`;
+        document.getElementById('game-progress-bar').style.width = `${Math.round((game.idx / game.questions.length) * 100)}%`;
+      } else {
+        document.getElementById('game-progress-text').textContent = `BOSS 剩余 ${game.bossQ.length}`;
+        document.getElementById('game-progress-bar').style.width = '100%';
+        document.getElementById('boss-hp-text').textContent = `${game.bossQ.length}/${game.bossMax}`;
+        document.getElementById('boss-hp-bar').style.width = `${Math.round(game.bossQ.length / Math.max(1, game.bossMax) * 100)}%`;
+      }
+    }
+
+    function renderQuestion() {
+      stopMic();
+      game.answered = false;
+      document.getElementById('feedback-bar').classList.add('hidden');
+      updateGameBars();
+      const q = currentQ();
+      if (!q) return;
+      const w = q.w;
+      const card = document.getElementById('question-card');
+      card.classList.remove('animate-shake');
+
+      const badges = {
+        mc_en_zh: ['🔤 中英互选 · 英选汉', 'bg-sky-100 text-sky-700'],
+        mc_zh_en: ['🔤 中英互选 · 汉选英', 'bg-indigo-100 text-indigo-700'],
+        photo_en: ['📸 看实景图说英语', 'bg-rose-100 text-rose-700'],
+        voice_en_zh: ['🎙️ 双语语音 · 看英说汉', 'bg-emerald-100 text-emerald-700'],
+        voice_zh_en: ['🎙️ 双语语音 · 看汉说英', 'bg-amber-100 text-amber-800']
+      };
+      const [bTxt, bCls] = badges[q.type];
+      const safeEn = w.en.replace(/'/g, "\\'");
+
+      if (q.type === 'mc_en_zh' || q.type === 'mc_zh_en') {
+        const opts = shuffle([w, ...getDistractors(w, 3)]);
+        const isEn = q.type === 'mc_en_zh';
+        card.innerHTML = `
+          <div class="animate-pop flex flex-col h-full justify-between">
+            <div class="flex justify-between items-center mb-3">
+              <span class="px-3.5 py-1 rounded-full text-xs font-extrabold ${bCls}">${bTxt}</span>
+              <span class="text-xs font-bold text-slate-400">Level ${w.level}</span>
+            </div>
+            <div class="text-center my-4">
+              <div class="text-4xl sm:text-6xl font-black text-slate-800 mb-1.5">${isEn ? w.en : w.zh}</div>
+              ${isEn && w.phonetic ? `<div class="text-sm sm:text-base font-semibold text-slate-400 mb-3">${w.phonetic}</div>` : ''}
+              ${isEn ? `<button onclick="speakText('${safeEn}')" class="btn-3d min-h-[46px] px-5 rounded-2xl bg-sky-50 text-sky-700 border border-sky-200 font-extrabold text-sm">🔊 听标准发音</button>` : `<p class="text-sm text-slate-400 font-semibold mt-2">请选择对应的英文单词</p>`}
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mt-4">
+              ${opts.map((o, i) => `
+                <button id="mc-opt-${i}" onclick="answerChoice(${i}, '${o.en.replace(/'/g, "\\'")}')" class="btn-3d min-h-[68px] px-5 py-3.5 rounded-2xl bg-slate-50 hover:bg-amber-50 border-2 border-slate-200 hover:border-amber-300 text-left flex items-center gap-4">
+                  <span class="w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-500 font-black flex items-center justify-center shrink-0">${'ABCD'[i]}</span>
+                  <div class="min-w-0">
+                    <div class="font-extrabold text-lg sm:text-xl text-slate-800 truncate">${isEn ? o.zh : o.en}</div>
+                    ${!isEn && o.phonetic ? `<div class="text-xs text-slate-400 font-medium">${o.phonetic}</div>` : ''}
+                  </div>
+                </button>`).join('')}
+            </div>
+          </div>`;
+        if (isEn) setTimeout(() => speakText(w.en), 220);
+      } else {
+        const isPhoto = q.type === 'photo_en';
+        const expectLang = q.type === 'voice_en_zh' ? 'zh-CN' : 'en-US';
+        const promptHint = isPhoto ? '请看着真实照片，大声说出对应的英文单词' : (expectLang === 'zh-CN' ? '请大声说出这个英文单词的中文意思' : '请大声说出这个中文对应的英文单词');
+
+        card.innerHTML = `
+          <div class="animate-pop flex flex-col h-full justify-between">
+            <div class="flex justify-between items-center mb-3">
+              <span class="px-3.5 py-1 rounded-full text-xs font-extrabold ${bCls}">${bTxt}</span>
+              <div class="flex items-center gap-2">
+                ${isPhoto ? `<button onclick="switchCardPhoto('q-real-photo', '${w.id}')" class="btn-3d px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-extrabold text-xs">🔄 换一张实景图</button>` : ''}
+                <button onclick="toggleKeyboardFallback()" class="btn-3d px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 font-extrabold text-xs">⌨️ 无麦键盘输入</button>
+              </div>
+            </div>
+
+            <div class="flex flex-col items-center my-2">
+              ${isPhoto ? `
+                <div class="w-full max-w-md aspect-[3/2] rounded-3xl overflow-hidden bg-slate-100 border-2 border-slate-200 shadow-inner mb-3 relative">
+                  <img id="q-real-photo" alt="${w.en}" class="w-full h-full object-cover photo-skeleton" />
+                </div>
+                <button onclick="speakText('${safeEn}')" class="btn-3d px-4 py-1.5 rounded-xl bg-sky-50 text-sky-700 font-bold text-xs border border-sky-200 mb-1">💡 听发音提示</button>
+              ` : `
+                <div class="text-4xl sm:text-6xl font-black text-slate-800 mt-3 mb-1">${expectLang === 'zh-CN' ? w.en : w.zh}</div>
+                ${expectLang === 'zh-CN' && w.phonetic ? `<div class="text-sm font-semibold text-slate-400 mb-2">${w.phonetic}</div>` : ''}
+                ${expectLang === 'zh-CN' ? `<button onclick="speakText('${safeEn}')" class="btn-3d min-h-[44px] px-5 rounded-2xl bg-sky-50 text-sky-700 border border-sky-200 font-extrabold text-sm mb-2">🔊 听英文发音</button>` : ''}
+              `}
+              <p class="text-xs sm:text-sm text-slate-500 font-semibold">${promptHint}</p>
+            </div>
+
+            <!-- 语音识别主控区 -->
+            <div class="flex flex-col items-center gap-3 mt-3">
+              <button id="btn-mic" onclick="toggleMic('${expectLang}')" class="btn-3d relative w-20 h-20 rounded-full bg-gradient-to-br from-coral to-rose-500 text-white shadow-xl flex items-center justify-center text-3xl">🎙️</button>
+              <div id="mic-status" class="text-xs sm:text-sm font-extrabold text-slate-500">点击麦克风开始朗读</div>
+              <div id="voice-score-box" class="hidden w-full max-w-md bg-slate-50 rounded-2xl p-3 border border-slate-200 text-center"></div>
+
+              <!-- 键盘兜底输入区 -->
+              <div id="kb-fallback" class="${game.showKeyFallback ? '' : 'hidden'} w-full max-w-md flex gap-2 mt-1">
+                <input id="kb-input" type="text" placeholder="${expectLang === 'zh-CN' ? '输入中文意思...' : '输入英文单词...'}" class="flex-1 min-h-[52px] px-4 rounded-2xl border-2 border-slate-200 font-bold text-slate-800 focus:outline-none focus:border-coral" onkeydown="if(event.key==='Enter') submitKeyboardAnswer('${expectLang}')" />
+                <button onclick="submitKeyboardAnswer('${expectLang}')" class="btn-3d min-h-[52px] px-6 rounded-2xl bg-slate-800 text-white font-black text-sm">提交</button>
+              </div>
+            </div>
+          </div>`;
+
+        if (isPhoto) bindRealPhoto('q-real-photo', w);
+        if (q.type === 'voice_en_zh') setTimeout(() => speakText(w.en), 220);
+      }
+    }
+
+    function toggleKeyboardFallback() {
+      game.showKeyFallback = !game.showKeyFallback;
+      const el = document.getElementById('kb-fallback');
+      if (el) { el.classList.toggle('hidden', !game.showKeyFallback); if (game.showKeyFallback) document.getElementById('kb-input')?.focus(); }
+    }
+
+    function answerChoice(idx, chosenEn) {
+      if (game.answered) return;
+      const q = currentQ(), w = q.w;
+      const ok = chosenEn.toLowerCase() === w.en.toLowerCase();
+      const btn = document.getElementById(`mc-opt-${idx}`);
+      if (btn) btn.className = `btn-3d min-h-[68px] px-5 py-3.5 rounded-2xl border-2 text-left flex items-center gap-4 ${ok ? 'bg-emerald-50 border-emerald-500' : 'bg-rose-50 border-rose-500'}`;
+      finishQuestion(ok, ok ? `太棒了！${w.en} ${w.phonetic || ''} = ${w.zh}` : `正确答案：${w.en} ${w.phonetic || ''}（${w.zh}）`);
+    }
+
+    /* ----- 语音识别 + Levenshtein 发音准确度评分 (0-100) ----- */
+    function levenshtein(a, b) {
+      const m = a.length, n = b.length;
+      const dp = Array.from({ length: m + 1 }, (_, i) => [i]);
+      for (let j = 1; j <= n; j++) dp[0][j] = j;
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+        }
+      }
+      return dp[m][n];
+    }
+
+    function scorePronunciation(spoken, target, confidence = 0.85, isZh = false) {
+      const clean = (s) => isZh ? s.replace(/[^\u4e00-\u9fa5]/g, '') : s.toLowerCase().replace(/[^a-z]/g, '');
+      const a = clean(spoken), b = clean(target);
+      if (!a) return 0;
+      if (a === b || (isZh && (a.includes(b) || b.includes(a)))) return Math.min(100, Math.round(88 + confidence * 12));
+      const dist = levenshtein(a, b);
+      const sim = Math.max(0, 1 - dist / Math.max(a.length, b.length, 1));
+      return Math.round(sim * 75 + confidence * 25 * sim);
+    }
+
+    function toggleMic(lang) {
+      if (game.answered) return;
+      if (micOn) { stopMic(); return; }
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        game.showKeyFallback = true;
+        document.getElementById('kb-fallback')?.classList.remove('hidden');
+        showToast('当前浏览器不支持麦克风识别，已自动打开键盘输入兜底', 'warn');
+        return;
+      }
+      try {
+        recog = new SR();
+        recog.lang = lang;
+        recog.interimResults = false;
+        recog.maxAlternatives = 2;
+        micOn = true;
+        document.getElementById('btn-mic')?.classList.add('mic-pulse');
+        document.getElementById('mic-status').textContent = '正在聆听，请大声说出答案...';
+
+        recog.onresult = (e) => {
+          const res = e.results[0][0];
+          evaluateVoiceOrText(res.transcript || '', res.confidence || 0.85, lang === 'zh-CN', true);
+        };
+        recog.onerror = () => {
+          stopMic();
+          game.showKeyFallback = true;
+          document.getElementById('kb-fallback')?.classList.remove('hidden');
+          showToast('未检测到语音或未授权麦克风，已打开键盘输入兜底', 'warn');
+        };
+        recog.onend = () => stopMic();
+        recog.start();
+      } catch (e) { stopMic(); }
+    }
+
+    function stopMic() {
+      micOn = false;
+      document.getElementById('btn-mic')?.classList.remove('mic-pulse');
+      if (recog) { try { recog.abort(); } catch (e) {} recog = null; }
+    }
+
+    function submitKeyboardAnswer(lang) {
+      if (game.answered) return;
+      const val = (document.getElementById('kb-input')?.value || '').trim();
+      if (!val) return showToast('请先输入答案', 'warn');
+      evaluateVoiceOrText(val, 0.95, lang === 'zh-CN', false);
+    }
+
+    function evaluateVoiceOrText(input, conf, isZh, isVoice) {
+      const q = currentQ(), w = q.w;
+      const target = isZh ? w.zh : w.en;
+      const score = scorePronunciation(input, target, conf, isZh);
+      const passed = score >= 75;
+
+      const box = document.getElementById('voice-score-box');
+      if (box) {
+        box.classList.remove('hidden');
+        const tip = passed ? '发音清晰准确！' : (isZh ? `识别为“${input}”，正确释义是“${w.zh}”` : `识别为“${input}”，注意重音与尾音，点击听标准音跟读`);
+        box.innerHTML = `
+          <div class="flex items-center justify-between text-xs font-extrabold mb-1">
+            <span>${isVoice ? '语音识别' : '键盘提交'}：“${input}”</span>
+            <span class="${passed ? 'text-emerald-600' : 'text-rose-600'} text-base font-black">${score} 分</span>
+          </div>
+          <div class="text-xs text-slate-500 font-semibold">${tip}</div>`;
+      }
+      if (!isZh) setTimeout(() => speakText(w.en), 200);
+      finishQuestion(passed, passed ? `发音达标 (${score}分)！${w.en} ${w.phonetic || ''} = ${w.zh}` : `未达 75 分（${score}分），该词已被吞词怪抓走！正确：${w.en}（${w.zh}）`);
+    }
+
+    function finishQuestion(ok, detail) {
+      game.answered = true;
+      game.totalCnt++;
+      const q = currentQ(), w = q.w;
+
+      recordSrs(w, ok);
+      if (ok) {
+        game.okCnt++;
+        game.combo++;
+        if (game.combo > game.maxCombo) game.maxCombo = game.combo;
+        playSFX(game.combo >= 3 ? 'combo' : 'ok');
+        if (game.combo >= 3) launchConfetti(35);
+        if (!w.mastered) { w.mastered = true; idbPut('words', w).catch(() => {}); }
+        if (game.phase === 'boss') game.bossQ.shift();
+      } else {
+        game.combo = 0;
+        playSFX('bad');
+        w.wrongCount = (w.wrongCount || 0) + 1;
+        idbPut('words', w).catch(() => {});
+        document.getElementById('question-card').classList.add('animate-shake');
+        game.wrongMap.set(w.id, q);
+        if (game.phase === 'boss') { const failed = game.bossQ.shift(); game.bossQ.push(failed); }
+      }
+
+      updateGameBars();
+      const fb = document.getElementById('feedback-bar');
+      fb.className = `mt-4 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg animate-pop ${ok ? 'bg-emerald-50 border-2 border-emerald-300 text-emerald-900' : 'bg-rose-50 border-2 border-rose-300 text-rose-900'}`;
+      document.getElementById('feedback-icon').className = `w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 ${ok ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`;
+      document.getElementById('feedback-icon').textContent = ok ? '✓' : '✕';
+      document.getElementById('feedback-title').textContent = ok ? (game.combo >= 3 ? `🔥 FEVER ${game.combo}连击！` : '回答正确！') : '再接再厉！';
+      document.getElementById('feedback-detail').textContent = detail;
+      document.getElementById('btn-next-q').className = `btn-3d w-full sm:w-auto min-h-[52px] px-8 rounded-2xl font-black text-base text-white shadow-md ${ok ? 'bg-emerald-500' : 'bg-rose-500'}`;
+      fb.classList.remove('hidden');
+    }
+
+    function nextQuestion() {
+      if (game.phase === 'normal') {
+        game.idx++;
+        if (game.idx < game.questions.length) { renderQuestion(); return; }
+        if (game.wrongMap.size > 0) {
+          game.phase = 'boss';
+          game.bossQ = Array.from(game.wrongMap.values());
+          game.bossMax = game.bossQ.length;
+          document.getElementById('boss-banner').classList.remove('hidden');
+          showToast('👾 吞词怪现身！答对所有错词即可击败它！', 'warn');
+          renderQuestion();
+          return;
+        }
+        showSummary();
+      } else {
+        if (game.bossQ.length > 0) { renderQuestion(); return; }
+        playSFX('boss');
+        showSummary();
+      }
+    }
+
+    let currentStoryEn = '';
+    function showSummary() {
+      playSFX('win');
+      launchConfetti(90);
+      const acc = Math.round((game.okCnt / Math.max(1, game.totalCnt)) * 100);
+      const stars = acc >= 90 ? 3 : (acc >= 70 ? 2 : 1);
+      app.meta.stars += stars + (game.maxCombo >= 3 ? 1 : 0);
+
+      if (!game.isSrs) {
+        const idx = LEVELS.indexOf(game.level);
+        if (idx >= app.meta.unlockedIdx && idx < LEVELS.length - 1) app.meta.unlockedIdx = idx + 1;
+      }
+      saveMeta();
+
+      document.getElementById('summary-title').textContent = `${game.title} 通关！`;
+      document.getElementById('summary-stars').innerHTML = [1, 2, 3].map(i => `<span class="${i <= stars ? 'text-amber-400' : 'text-slate-200'}">★</span>`).join('');
+      document.getElementById('summary-acc').textContent = `${acc}%`;
+      document.getElementById('summary-combo').textContent = `${game.maxCombo}x`;
+      document.getElementById('summary-srs').textContent = `${game.words.length}词`;
+
+      // 生成本轮 3 句双语迷你故事
+      const pick = game.words.slice(0, 6);
+      const w0 = pick[0] || { en: 'apple', zh: '苹果' }, w1 = pick[1] || w0, w2 = pick[2] || w0, w3 = pick[3] || w1;
+      currentStoryEn = `Today I went on an island adventure and discovered a shiny ${w0.en} near the ${w1.en}. Suddenly, a friendly ${w2.en} appeared right next to the ${w3.en}! We practiced English together and celebrated a wonderful victory!`;
+      const storyZh = `今天我去海岛探险，在“${w1.zh}”旁边发现了一个闪亮的“${w0.zh}”。突然，一只友善的“${w2.zh}”出现在“${w3.zh}”旁边！我们一起练习英语，庆祝这场超棒的胜利！`;
+      document.getElementById('summary-story-en').textContent = currentStoryEn;
+      document.getElementById('summary-story-zh').textContent = storyZh;
+      document.getElementById('btn-continue-level').classList.toggle('hidden', game.isSrs);
+
+      switchView('view-summary');
+      updateHUD();
+    }
+
+    function readMiniStory() { if (currentStoryEn) speakText(currentStoryEn, 'en-US', 0.88); }
+    function continueSameLevel() { launchLevel = game.level; launchMode = game.mode; startLevelBatchRound(false); }
+
+    /* =========================================================================
+       8. 亲子双人分屏 PK 抢答模式 (面对面 180° / 并排模式 · 10/15/20 题)
+    ========================================================================= */
+    let pkCfg = { layout: 'face', rounds: 10 };
+    let pk = null;
+
+    function populatePkLevelDropdown() {
+      const sel = document.getElementById('pk-level');
+      sel.innerHTML = `<option value="MIXED">🌈 aa–C 千词混合池</option>` + LEVELS.map(l => `<option value="${l}">Level ${l} (${(app.wordsByLevel[l] || []).length}词)</option>`).join('');
+    }
+
+    function openPkSetupView() { populatePkLevelDropdown(); switchView('view-pk-setup'); }
+
+    function setPkLayout(lay) {
+      pkCfg.layout = lay;
+      document.getElementById('pk-lay-face').className = `btn-3d min-h-[64px] p-4 rounded-2xl border-2 text-left flex items-center gap-3 ${lay === 'face' ? 'border-coral bg-orange-50/70' : 'border-slate-200 bg-slate-50'}`;
+      document.getElementById('pk-lay-side').className = `btn-3d min-h-[64px] p-4 rounded-2xl border-2 text-left flex items-center gap-3 ${lay === 'side' ? 'border-coral bg-orange-50/70' : 'border-slate-200 bg-slate-50'}`;
+    }
+
+    function setPkRounds(n) {
+      pkCfg.rounds = n;
+      [10, 15, 20].forEach(r => {
+        document.getElementById(`pk-r-${r}`).className = `btn-3d min-h-[52px] rounded-2xl border-2 font-black text-sm ${r === n ? 'border-coral bg-orange-50 text-coral' : 'border-slate-200 bg-slate-50 text-slate-600'}`;
+      });
+    }
+
+    function startPkMatch() {
+      const lvl = document.getElementById('pk-level').value;
+      const mode = document.getElementById('pk-mode').value;
+      const p1Name = document.getElementById('pk-p1-name').value.trim() || '玩家1';
+      const p2Name = document.getElementById('pk-p2-name').value.trim() || '玩家2';
+
+      let pool = lvl === 'MIXED' ? ['aa','A','B','C'].flatMap(l => app.wordsByLevel[l] || []) : (app.wordsByLevel[lvl] || []);
+      if (pool.length < 4) return showToast('该级别词数不足 4 个，请选择其他级别', 'warn');
+
+      const types = ['en_zh', 'zh_en', 'photo_en'];
+      const qs = shuffle(pool).slice(0, Math.min(pkCfg.rounds, pool.length)).map((w, i) => ({
+        w,
+        qMode: mode === 'mix' ? types[i % 3] : mode,
+        opts: shuffle([w, ...getDistractors(w, 3)])
+      }));
+
+      pk = {
+        layout: pkCfg.layout, qs, idx: 0, resolved: false, qStart: 0,
+        p1: { name: p1Name, score: 0, hits: 0, lockUntil: 0 },
+        p2: { name: p2Name, score: 0, hits: 0, lockUntil: 0 },
+        wrongs: new Map()
+      };
+      switchView('view-pk-arena');
+      renderPkQuestion();
+    }
+
+    function renderPkPanel(side, q, isRotated) {
+      const p = pk[side];
+      const isP1 = side === 'p1';
+      const isEnPrompt = q.qMode === 'en_zh';
+      const isPhoto = q.qMode === 'photo_en';
+      const theme = isP1 ? 'bg-rose-50 border-rose-200' : 'bg-sky-50 border-sky-200';
+      const badge = isP1 ? 'bg-rose-500' : 'bg-sky-500';
+      const imgId = `pk-img-${side}`;
+
+      return `
+        <div class="flex-1 flex flex-col justify-between p-3 sm:p-5 ${theme} ${isRotated ? 'rotate-180-player' : ''} overflow-hidden">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="px-3 py-1 rounded-full ${badge} text-white font-black text-xs">${p.name}</span>
+              <span id="pk-lock-${side}" class="hidden px-2.5 py-0.5 rounded-full bg-slate-800 text-amber-300 font-black text-xs">❄️ 冰冻 1.5s</span>
+            </div>
+            <div class="text-xl sm:text-2xl font-black ${isP1 ? 'text-rose-600' : 'text-sky-600'}">得分: <span id="pk-sc-${side}">${p.score}</span></div>
+          </div>
+
+          <div class="flex flex-col items-center justify-center my-1.5">
+            ${isPhoto ? `
+              <div class="w-40 sm:w-52 aspect-[3/2] rounded-2xl overflow-hidden bg-white border-2 border-white shadow">
+                <img id="${imgId}" alt="${q.w.en}" class="w-full h-full object-cover photo-skeleton" />
+              </div>
+            ` : `<div class="text-2xl sm:text-4xl font-black text-slate-800">${isEnPrompt ? q.w.en : q.w.zh}</div>`}
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            ${q.opts.map((o, i) => `
+              <button id="pk-btn-${side}-${i}" onclick="pkTap('${side}', ${i}, '${o.en.replace(/'/g, "\\'")}')"
+                class="btn-3d min-h-[54px] sm:min-h-[64px] px-3 py-2 rounded-2xl bg-white hover:bg-amber-50 border-2 border-slate-200 font-extrabold text-sm sm:text-lg text-slate-800 shadow-sm truncate">
+                ${isEnPrompt ? o.zh : o.en}
+              </button>`).join('')}
+          </div>
+        </div>`;
+    }
+
+    function renderPkQuestion() {
+      pk.resolved = false;
+      pk.qStart = Date.now();
+      const q = pk.qs[pk.idx];
+      const arena = document.getElementById('view-pk-arena');
+      const isFace = pk.layout === 'face';
+
+      arena.innerHTML = `
+        <div class="flex-1 flex ${isFace ? 'flex-col' : 'flex-row'} h-full w-full">
+          ${renderPkPanel('p1', q, isFace)}
+          <div class="${isFace ? 'h-12 w-full flex-row' : 'w-20 h-full flex-col'} bg-slate-900 text-white flex items-center justify-between px-4 py-2 shrink-0 gap-2 z-10">
+            <button onclick="goHomeMap()" class="px-3 py-1.5 rounded-xl bg-white/15 text-xs font-extrabold">退出</button>
+            <div class="text-center font-black text-xs sm:text-sm">
+              <span class="text-amber-400">第 ${pk.idx + 1}/${pk.qs.length} 题</span>
+              <span id="pk-banner-msg" class="ml-2 text-emerald-300"></span>
+            </div>
+            <button onclick="speakText('${q.w.en.replace(/'/g, "\\'")}')" class="px-3 py-1.5 rounded-xl bg-amber-400 text-slate-900 text-xs font-black">🔊 读词</button>
+          </div>
+          ${renderPkPanel('p2', q, false)}
+        </div>`;
+
+      if (q.qMode === 'photo_en') {
+        bindRealPhoto('pk-img-p1', q.w);
+        bindRealPhoto('pk-img-p2', q.w);
+      } else if (q.qMode === 'en_zh') {
+        setTimeout(() => speakText(q.w.en), 150);
+      }
+    }
+
+    function pkTap(side, idx, chosenEn) {
+      if (!pk || pk.resolved) return;
+      const now = Date.now(), p = pk[side];
+      if (now < p.lockUntil) return;
+
+      const q = pk.qs[pk.idx];
+      const ok = chosenEn.toLowerCase() === q.w.en.toLowerCase();
+      const btn = document.getElementById(`pk-btn-${side}-${idx}`);
+
+      if (ok) {
+        pk.resolved = true;
+        const speedBonus = Math.max(0, Math.round((5000 - (now - pk.qStart)) / 500));
+        p.score += 10 + speedBonus;
+        p.hits++;
+        playSFX('pk');
+        if (btn) btn.className = 'btn-3d min-h-[54px] sm:min-h-[64px] px-3 py-2 rounded-2xl bg-emerald-500 text-white border-2 border-emerald-600 font-black text-sm sm:text-lg shadow';
+        document.getElementById(`pk-sc-${side}`).textContent = p.score;
+        document.getElementById('pk-banner-msg').textContent = `${p.name} 抢答成功 +${10 + speedBonus}！`;
+        setTimeout(() => {
+          pk.idx++;
+          if (pk.idx < pk.qs.length) renderPkQuestion();
+          else showPkPodium();
+        }, 900);
+      } else {
+        p.lockUntil = now + 1500;
+        pk.wrongs.set(q.w.id, q.w);
+        playSFX('bad');
+        if (btn) btn.className = 'btn-3d min-h-[54px] sm:min-h-[64px] px-3 py-2 rounded-2xl bg-rose-500 text-white border-2 border-rose-600 font-black text-sm sm:text-lg animate-shake';
+        const lk = document.getElementById(`pk-lock-${side}`);
+        lk?.classList.remove('hidden');
+        setTimeout(() => lk?.classList.add('hidden'), 1500);
+      }
+    }
+
+    function showPkPodium() {
+      playSFX('win');
+      launchConfetti(90);
+      const { p1, p2 } = pk;
+      const winTxt = p1.score === p2.score ? '🤝 旗鼓相当，平局！' : (p1.score > p2.score ? `🎉 ${p1.name} 夺冠！` : `🎉 ${p2.name} 夺冠！`);
+      document.getElementById('pk-winner-title').textContent = winTxt;
+      document.getElementById('pod-p1-name').textContent = p1.name;
+      document.getElementById('pod-p1-score').textContent = p1.score;
+      document.getElementById('pod-p1-hits').textContent = p1.hits;
+      document.getElementById('pod-p2-name').textContent = p2.name;
+      document.getElementById('pod-p2-score').textContent = p2.score;
+      document.getElementById('pod-p2-hits').textContent = p2.hits;
+      document.getElementById('pk-wrong-num').textContent = pk.wrongs.size;
+      document.getElementById('btn-pk-srs').disabled = pk.wrongs.size === 0;
+
+      const chips = document.getElementById('pk-wrong-chips');
+      chips.innerHTML = pk.wrongs.size
+        ? Array.from(pk.wrongs.values()).map(w => `<span class="px-2.5 py-1 rounded-lg bg-white border border-indigo-200 text-xs font-extrabold text-indigo-800">${w.en} · ${w.zh}</span>`).join('')
+        : `<span class="text-xs text-indigo-500 font-semibold">本局零失误，表现满分！</span>`;
+      switchView('view-pk-podium');
+    }
+
+    function addPkWrongsToSrs() {
+      if (!pk || pk.wrongs.size === 0) return;
+      pk.wrongs.forEach(w => recordSrs(w, false));
+      showToast(`已将 ${pk.wrongs.size} 个错词加入艾宾浩斯复习库`, 'success');
+      document.getElementById('btn-pk-srs').disabled = true;
+    }
+
+    /* =========================================================================
+       9. 每日艾宾浩斯遗忘曲线看板 + 闹钟定时 + iPad .ics 日历导出
+    ========================================================================= */
+    function openSrsView() {
+      renderSrsDashboard();
+      switchView('view-srs');
+    }
+
+    function renderSrsDashboard() {
+      const now = Date.now();
+      let due = 0, learning = 0, mastered = 0;
+      const counts = [0, 0, 0, 0, 0, 0];
+
+      app.srsMap.forEach(r => {
+        if (r.stage >= 7) mastered++;
+        else {
+          if (r.nextReviewAt <= now) due++; else learning++;
+          const idx = Math.max(0, Math.min(5, (r.stage || 1) - 1));
+          counts[idx]++;
+        }
+      });
+
+      document.getElementById('srs-cnt-due').textContent = due;
+      document.getElementById('srs-cnt-learning').textContent = learning;
+      document.getElementById('srs-cnt-mastered').textContent = mastered;
+      document.getElementById('srs-due-btn-num').textContent = due;
+      updateSrsBadge();
+
+      const maxVal = Math.max(1, ...counts);
+      const labels = ['S1 (+1天)', 'S2 (+2天)', 'S3 (+4天)', 'S4 (+7天)', 'S5 (+15天)', 'S6 (+30天)'];
+      document.getElementById('srs-stage-chart').innerHTML = counts.map((c, i) => {
+        const h = Math.max(10, Math.round((c / maxVal) * 100));
+        return `
+          <div class="flex flex-col items-center h-full justify-end gap-1.5">
+            <span class="text-xs font-black text-indigo-700">${c}</span>
+            <div class="w-full max-w-[44px] bg-gradient-to-t from-indigo-500 to-sky-400 rounded-t-xl transition-all" style="height:${h}%"></div>
+            <span class="text-[11px] font-bold text-slate-500 text-center">${labels[i]}</span>
+          </div>`;
+      }).join('');
+
+      const dueWords = getDueSrsWords();
+      const chips = document.getElementById('srs-due-chips');
+      chips.innerHTML = dueWords.length
+        ? dueWords.slice(0, 40).map(w => `<button onclick="speakText('${w.en.replace(/'/g, "\\'")}')" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-xs font-extrabold text-rose-800">${w.en} · ${w.zh}</button>`).join('')
+        : `<span class="text-xs text-slate-400 font-semibold">今日暂无到期词。你可以点击上方“⏩ 模拟时间推移 1 天”或“⚡ 提前巩固练习”立即体验！</span>`;
+    }
+
+    function startSrsReviewSession(earlyPractice = false) {
+      let due = getDueSrsWords();
+      if (!due.length && !earlyPractice) {
+        return showToast('今日暂无到期词！可点击“模拟时间推移 1 天”或“提前巩固练习”', 'info');
+      }
+      if (!due.length && earlyPractice) {
+        const tracked = Array.from(app.srsMap.values()).map(r => app.wordMap.get(r.id)).filter(Boolean);
+        due = tracked.length ? shuffle(tracked).slice(0, 10) : shuffle(app.wordsByLevel['aa'] || []).slice(0, 10);
+      } else {
+        due = due.slice(0, 15);
+      }
+      launchGame({ level: 'SRS', words: due, mode: 'mixed', isSrs: true, title: `🧠 艾宾浩斯复习 (${due.length}词)` });
+    }
+
+    async function simulateTimeTravelOneDay() {
+      if (app.srsMap.size === 0) {
+        (app.wordsByLevel['aa'] || []).slice(0, 6).forEach(w => recordSrs(w, true));
+      }
+      const updates = [];
+      app.srsMap.forEach(r => {
+        if (r.stage < 7) { r.nextReviewAt -= DAY_MS; updates.push(r); }
+      });
+      if (updates.length) await idbBulkPut('srs', updates);
+      renderSrsDashboard();
+      showToast('⏩ 已模拟时间推移 1 天，到期单词已刷新！', 'success');
+    }
+
+    function saveAlarmConfig() {
+      app.meta.alarmTime = document.getElementById('alarm-time').value || '19:30';
+      app.meta.alarmEnabled = document.getElementById('alarm-enabled').checked;
+      localStorage.setItem('raz_alarm_time', app.meta.alarmTime);
+      saveMeta();
+      showToast(`⏰ 每日提醒已设为 ${app.meta.alarmTime}`, 'info');
+    }
+
+    function requestNotifPermission() {
+      if (!('Notification' in window)) return showToast('当前浏览器不支持网页通知，建议使用下方 iPad 日历 .ics 闹钟', 'warn');
+      Notification.requestPermission().then(p => showToast(p === 'granted' ? '🔔 网页通知权限已开启' : '未授予通知权限，请使用 .ics 日历闹钟', p === 'granted' ? 'success' : 'warn'));
+    }
+
+    function triggerAlarmDemo() {
+      playSFX('alarm');
+      const due = getDueSrsWords().length;
+      document.getElementById('alarm-modal-desc').textContent = due > 0 ? `今天有 ${due} 个艾宾浩斯到期单词等你唤醒！` : '保持每天 3 分钟学习习惯，记忆更牢固！';
+      openModal('alarm-modal');
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('⏰ RAZ 单词复习时间到！', { body: `今日待复习 ${due} 个单词，点击开始打卡` });
+      }
+    }
+
+    function startAlarmTicker() {
+      setInterval(() => {
+        if (!app.meta.alarmEnabled) return;
+        const d = new Date();
+        const hhmm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        const today = d.toISOString().slice(0, 10);
+        if (hhmm === app.meta.alarmTime && app.meta.alarmLastDate !== today) {
+          app.meta.alarmLastDate = today;
+          saveMeta();
+          triggerAlarmDemo();
+        }
+      }, 25000);
+    }
+
+    function exportIpadCalendarICS() {
+      const [hh, mm] = (app.meta.alarmTime || '19:30').split(':');
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const dtStart = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}T${pad(hh)}${pad(mm)}00`;
+      const endMin = (Number(mm) + 15) % 60;
+      const endHr = (Number(hh) + Math.floor((Number(mm) + 15) / 60)) % 24;
+      const dtEnd = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}T${pad(endHr)}${pad(endMin)}00`;
+
+      const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//RAZ Adventure Pro//iPad SRS Alarm//ZH',
+        'BEGIN:VEVENT',
+        `UID:raz-srs-${Date.now()}@razpro.local`,
+        `DTSTAMP:${dtStart}Z`,
+        `DTSTART:${dtStart}`,
+        `DTEND:${dtEnd}`,
+        'RRULE:FREQ=DAILY',
+        'SUMMARY:⏰ RAZ 实景单词每日艾宾浩斯复习',
+        'DESCRIPTION:打开 iPad 主屏幕上的“RAZ 实景单词大冒险 Pro”，花 3 分钟巩固今日艾宾浩斯到期单词！',
+        'BEGIN:VALARM',
+        'ACTION:DISPLAY',
+        'DESCRIPTION:RAZ 单词复习时间到！',
+        'TRIGGER:-PT5M',
+        'END:VALARM',
+        'END:VEVENT',
+        'END:VCALENDAR'
+      ].join('\r\n');
+
+      const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `RAZ_Daily_Review_${hh}${mm}.ics`;
+      a.click();
+      showToast('📅 已下载 .ics 日历文件，在 iPad 点击即可添加每日原生日历闹钟！', 'success');
+    }
+
+    /* =========================================================================
+       10. 实景图鉴收藏册
+    ========================================================================= */
+    let albumLevel = 'aa', albumLimit = 20;
+
+    function openAlbumView() {
+      renderAlbumTabs();
+      renderAlbumGrid();
+      switchView('view-album');
+    }
+
+    function renderAlbumTabs() {
+      document.getElementById('album-tabs').innerHTML = LEVELS.map(l => `
+        <button onclick="albumLevel='${l}'; albumLimit=20; renderAlbumTabs(); renderAlbumGrid();"
+          class="btn-3d px-3.5 py-2 rounded-xl font-extrabold text-xs shrink-0 ${l === albumLevel ? 'bg-sky-500 text-white shadow' : 'bg-white border border-slate-200 text-slate-600'}">
+          ${l} (${(app.wordsByLevel[l] || []).length})
+        </button>`).join('');
+    }
+
+    function renderAlbumGrid() {
+      const onlyM = document.getElementById('album-only-mastered').checked;
+      let list = app.wordsByLevel[albumLevel] || [];
+      if (onlyM) list = list.filter(w => w.mastered);
+      document.getElementById('album-badge').textContent = `Level ${albumLevel} · ${list.length} 词`;
+
+      const slice = list.slice(0, albumLimit);
+      const grid = document.getElementById('album-grid');
+      if (!slice.length) {
+        grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400 font-bold">暂无符合条件的单词，快去闯关点亮吧！</div>`;
+        document.getElementById('album-more').innerHTML = '';
+        return;
+      }
+
+      grid.innerHTML = slice.map((w, i) => `
+        <div class="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm flex flex-col">
+          <div class="aspect-[4/3] bg-slate-100 relative overflow-hidden">
+            <img id="alb-img-${i}" alt="${w.en}" class="w-full h-full object-cover photo-skeleton" />
+            ${w.mastered ? `<span class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black">已掌握</span>` : ''}
+            <button onclick="switchCardPhoto('alb-img-${i}', '${w.id}')" class="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-black/45 text-white text-xs flex items-center justify-center" title="换一张实景图">🔄</button>
+          </div>
+          <div class="p-3 flex items-center justify-between gap-2">
+            <div class="truncate">
+              <div class="font-black text-slate-800 text-sm truncate">${w.en}</div>
+              <div class="text-[11px] text-slate-400 font-medium truncate">${w.phonetic || ''}</div>
+              <div class="text-xs text-slate-600 font-semibold truncate">${w.zh}</div>
+            </div>
+            <button onclick="speakText('${w.en.replace(/'/g, "\\'")}')" class="btn-3d w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">🔊</button>
+          </div>
+        </div>`).join('');
+
+      slice.forEach((w, i) => bindRealPhoto(`alb-img-${i}`, w));
+      document.getElementById('album-more').innerHTML = list.length > albumLimit
+        ? `<button onclick="albumLimit+=20; renderAlbumGrid();" class="btn-3d min-h-[48px] px-7 rounded-2xl bg-sky-100 text-sky-700 font-extrabold text-sm">加载更多 (${list.length - albumLimit} 词)</button>`
+        : '';
+    }
+
+    /* =========================================================================
+       11. 无限词库管理与 D-Z 导入引擎 (27格词量矩阵 + CSV/JSON 合并/覆盖)
+    ========================================================================= */
+    function renderImportMatrix() {
+      document.getElementById('imp-total-cnt').textContent = app.wordMap.size;
+      document.getElementById('imp-level-matrix').innerHTML = LEVELS.map(l => {
+        const cnt = (app.wordsByLevel[l] || []).length;
+        const style = cnt >= 100
+          ? 'bg-emerald-100 border-emerald-300 text-emerald-900'
+          : (cnt > 0 ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-slate-100 border-slate-200 text-slate-400');
+        return `
+          <div class="rounded-xl border px-2 py-1.5 text-center ${style}">
+            <div class="text-xs font-black">${l}</div>
+            <div class="text-[10px] font-bold">${cnt}</div>
+          </div>`;
+      }).join('');
+    }
+
+    function openImportModal() {
+      renderImportMatrix();
+      openModal('modal-import');
+    }
+
+    function downloadCsvTemplate() {
+      const csv = [
+        'level,word,zh,phonetic,imageUrl',
+        'D,chameleon,变色龙,/kəˈmiːliən/,',
+        'E,aquarium,水族馆,/əˈkweəriəm/,',
+        'F,hurricane,飓风,/ˈhʌrɪkən/,',
+        'G,astronomy,天文学,/əˈstrɒnəmi/,'
+      ].join('\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
+      a.download = 'RAZ_DZ_Vocab_Template.csv';
+      a.click();
+    }
+
+    function exportBackupJson() {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        words: Array.from(app.wordMap.values()),
+        srs: Array.from(app.srsMap.values()),
+        meta: app.meta
+      };
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+      a.download = `RAZ_Pro_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      showToast('💾 已导出整库 JSON 备份', 'success');
+    }
+
+    function handleImportFile(e) {
+      const f = e.target.files?.[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        document.getElementById('imp-textarea').value = ev.target.result || '';
+        showToast(`已读取文件：${f.name}`, 'info');
+      };
+      reader.readAsText(f, 'UTF-8');
+    }
+
+    async function runBulkImport() {
+      const raw = document.getElementById('imp-textarea').value.trim();
+      if (!raw) return showToast('请先粘贴内容或上传 CSV/JSON 文件', 'warn');
+      const mode = document.querySelector('input[name="imp-mode"]:checked')?.value || 'merge';
+
+      const parsed = [];
+      try {
+        if (raw.startsWith('{') || raw.startsWith('[')) {
+          const j = JSON.parse(raw);
+          const arr = Array.isArray(j) ? j : (j.words || []);
+          arr.forEach(item => {
+            const en = String(item.word || item.en || '').trim();
+            const lvl = String(item.level || '').trim();
+            const zh = String(item.zh || '').trim();
+            if (lvl && en && zh) {
+              parsed.push({
+                level: lvl, en, zh,
+                phonetic: String(item.phonetic || '').trim(),
+                imageUrl: String(item.imageUrl || '').trim()
+              });
+            }
+          });
+        } else {
+          raw.split(/\r?\n/).forEach((line, idx) => {
+            const clean = line.trim();
+            if (!clean) return;
+            const cols = clean.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+            if (idx === 0 && (cols[0].toLowerCase() === 'level' || cols[1]?.toLowerCase() === 'word' || cols[1]?.toLowerCase() === 'en')) return;
+            if (cols.length >= 3 && cols[0] && cols[1] && cols[2]) {
+              parsed.push({
+                level: cols[0],
+                en: cols[1],
+                zh: cols[2],
+                phonetic: cols[3] || '',
+                imageUrl: cols[4] || ''
+              });
+            }
+          });
+        }
+      } catch (err) {
+        return showToast('解析失败，请检查 CSV 或 JSON 格式是否正确', 'error');
+      }
+
+      if (!parsed.length) return showToast('未识别到有效词条，请检查格式：level,word,zh,phonetic,imageUrl', 'warn');
+
+      // 覆盖模式：先清除涉及级别的旧词
+      if (mode === 'overwrite') {
+        const targetLevels = new Set(parsed.map(p => p.level));
+        const delKeys = [];
+        app.wordMap.forEach((w, k) => { if (targetLevels.has(w.level)) delKeys.push(k); });
+        if (delKeys.length) {
+          await idbBulkDel('words', delKeys);
+          delKeys.forEach(k => app.wordMap.delete(k));
+        }
+      }
+
+      // 去重并写入 IndexedDB
+      const toSave = [];
+      const seenIds = new Set();
+      parsed.forEach(p => {
+        const lvl = LEVELS.includes(p.level) ? p.level : (LEVELS.includes(p.level.toUpperCase()) ? p.level.toUpperCase() : p.level);
+        const id = `${lvl}:${p.en.toLowerCase()}`;
+        if (seenIds.has(id)) return;
+        seenIds.add(id);
+        const prev = app.wordMap.get(id);
+        const obj = {
+          id, level: lvl, en: p.en, zh: p.zh,
+          phonetic: p.phonetic || prev?.phonetic || '',
+          imageUrl: p.imageUrl || prev?.imageUrl || '',
+          mastered: prev ? !!prev.mastered : false,
+          wrongCount: prev ? (prev.wrongCount || 0) : 0
+        };
+        toSave.push(obj);
+        app.wordMap.set(id, obj);
+      });
+
+      await idbBulkPut('words', toSave);
+      rebuildIndexes(Array.from(app.wordMap.values()));
+      populatePkLevelDropdown();
+      renderImportMatrix();
+      renderAdventureMap();
+      document.getElementById('imp-textarea').value = '';
+      showToast(`✅ 成功导入 ${toSave.length} 个单词并同步至 IndexedDB！`, 'success');
+    }
+
+    // 启动应用
+    window.addEventListener('DOMContentLoaded', bootApp);
+  </script>
+</body>
+</html>
