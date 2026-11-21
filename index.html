@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="RAZ单词Pro" />
   <meta name="theme-color" content="#FAF7F2" />
-  <title>RAZ 实景单词大冒险 Pro · iPad 离线千词版</title>
+  <title>RAZ 单词大冒险 Pro · iPad 离线卡通千词版</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -80,6 +80,19 @@
     .rotate-180-player { transform: rotate(180deg); }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* 本地卡通插画轻柔漂浮与弹跳微动效 */
+    @keyframes cartoonFloat {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-6px) scale(1.03); }
+    }
+    .cartoon-float { animation: cartoonFloat 2.8s ease-in-out infinite; }
+    @keyframes cartoonPop {
+      0% { transform: scale(0.86); opacity: 0.4; }
+      70% { transform: scale(1.04); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .cartoon-pop { animation: cartoonPop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -94,7 +107,7 @@
   <div id="boot-overlay" class="fixed inset-0 z-50 bg-cream/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
     <div class="w-16 h-16 rounded-3xl bg-gradient-to-br from-orange-400 to-rose-500 text-white font-black text-2xl flex items-center justify-center shadow-lg mb-4 animate-bounce">PRO</div>
     <h2 class="text-xl font-black text-slate-800 mb-1">正在初始化 IndexedDB 离线词库引擎...</h2>
-    <p id="boot-status" class="text-sm text-slate-500 font-semibold">写入 aa–C 1,000 核心词（含音标）与 D–Z 全 27 关</p>
+    <p id="boot-status" class="text-sm text-slate-500 font-semibold">写入 aa–C 1,000 核心词（含音标）与 100% 本地离线卡通引擎</p>
   </div>
 
   <!-- 艾宾浩斯闹钟响铃弹窗 -->
@@ -118,7 +131,7 @@
       <div class="flex items-center gap-2.5 cursor-pointer shrink-0" onclick="goHomeMap()">
         <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center text-white font-black text-sm shadow-md">PRO</div>
         <div class="leading-tight hidden md:block">
-          <h1 class="font-extrabold text-slate-800 text-sm lg:text-base">RAZ 实景单词大冒险</h1>
+          <h1 class="font-extrabold text-slate-800 text-sm lg:text-base">RAZ 单词大冒险</h1>
           <div class="flex items-center gap-2 text-[11px] font-bold">
             <span id="hud-total-words" class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">总词库: 0</span>
             <span id="hud-stars" class="text-amber-600 font-black">★ 0</span>
@@ -139,7 +152,7 @@
           <span id="hud-srs-badge" class="hidden -top-1.5 -right-1.5 absolute min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-black flex items-center justify-center shadow">0</span>
         </button>
         <button id="nav-album" onclick="openAlbumView()" class="btn-3d px-3 sm:px-3.5 py-2 rounded-2xl bg-sky-50 text-sky-700 border border-sky-200 font-extrabold text-xs sm:text-sm flex items-center gap-1 shrink-0">
-          <span>📸</span><span>实景图鉴</span>
+          <span>🎨</span><span>卡通图鉴</span>
         </button>
         <button id="nav-import" onclick="openImportModal()" class="btn-3d px-3 sm:px-3.5 py-2 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-extrabold text-xs sm:text-sm flex items-center gap-1 shrink-0">
           <span>📚</span><span>词库管理/导入</span>
@@ -167,10 +180,10 @@
       <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs sm:text-sm font-bold mb-2">
-            <span>🗄️ IndexedDB 离线引擎 · aa–C 1,000 核心词 + D–Z 随时导入扩展</span>
+            <span>🗄️ IndexedDB 离线引擎 · aa–C 1,000 核心词 + 0ms 本地卡通引擎</span>
           </div>
-          <h2 class="text-2xl sm:text-3xl font-black tracking-tight">系统征服 aa–Z 实景单词岛！</h2>
-          <p class="text-white/95 text-sm sm:text-base mt-1 font-medium">每轮智能抽取 10 个未掌握新词 · Wikimedia 真实摄影图自动匹配 · 语音评测 + 错词 Boss 战</p>
+          <h2 class="text-2xl sm:text-3xl font-black tracking-tight">系统征服 aa–Z 卡通单词岛！</h2>
+          <p class="text-white/95 text-sm sm:text-base mt-1 font-medium">每轮智能抽取 10 个未掌握新词 · 100% 本地离线卡通插画秒出图 · 语音评测 + 错词 Boss 战</p>
         </div>
         <div class="flex flex-wrap gap-2">
           <button onclick="openImportModal()" class="btn-3d min-h-[48px] px-4 rounded-2xl bg-white/20 hover:bg-white/30 border border-white/30 text-white font-extrabold text-xs sm:text-sm">📚 管理词库 / 导入 D–Z</button>
@@ -345,10 +358,10 @@
         <div>
           <label class="block text-xs font-extrabold text-slate-500 mb-2">抢答模式</label>
           <select id="pk-mode" class="w-full min-h-[52px] px-3.5 rounded-2xl bg-slate-50 border border-slate-200 font-extrabold text-slate-800 text-sm">
-            <option value="mix">🎯 综合混合（英/汉/实景图）</option>
+            <option value="mix">🎯 综合混合（英/汉/卡通图）</option>
             <option value="en_zh">🔤 看英选汉</option>
             <option value="zh_en">🔤 看汉选英</option>
-            <option value="photo_en">📸 看实景图抢答</option>
+            <option value="photo_en">🎨 看卡通图抢答</option>
           </select>
         </div>
         <div>
@@ -497,20 +510,23 @@
     </section>
   </main>
 
-  <!-- ==================== 视图 8：实景图鉴收藏册 ==================== -->
+  <!-- ==================== 视图 8：卡通图鉴收藏册 ==================== -->
   <main id="view-album" class="hidden flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-5 pb-14">
     <div class="bg-white rounded-3xl p-5 sm:p-6 border border-sky-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
         <h2 class="text-2xl font-black text-slate-800 flex items-center gap-2">
-          <span>📸 实景图鉴收藏册</span>
+          <span>🎨 卡通图鉴收藏册</span>
           <span id="album-badge" class="text-xs bg-sky-100 text-sky-700 px-3 py-1 rounded-full font-extrabold">0 词</span>
         </h2>
-        <p class="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">全真实摄影图（严禁卡通插画），含音标展示，点击即可听发音或切换照片</p>
+        <p class="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">100% 本地离线卡通插画（0ms 瞬时出图），含音标展示，点击即可听发音或切换画风</p>
       </div>
-      <label class="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-extrabold text-slate-700 cursor-pointer">
-        <input type="checkbox" id="album-only-mastered" onchange="renderAlbumGrid()" class="w-4 h-4 accent-sky-500" />
-        <span>仅看已掌握</span>
-      </label>
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="cycleGlobalArtStyle(true)" class="btn-3d px-4 py-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-extrabold">🎨 切换画风：<span id="album-style-name">绘本水彩风</span></button>
+        <label class="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-extrabold text-slate-700 cursor-pointer">
+          <input type="checkbox" id="album-only-mastered" onchange="renderAlbumGrid()" class="w-4 h-4 accent-sky-500" />
+          <span>仅看已掌握</span>
+        </label>
+      </div>
     </div>
     <div id="album-tabs" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1"></div>
     <div id="album-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
@@ -535,7 +551,7 @@
       <div class="grid grid-cols-2 gap-2.5 mb-5">
         <button onclick="setLaunchMode('mixed')" id="lm-mixed" class="btn-3d min-h-[52px] rounded-2xl border-2 border-coral bg-orange-50 text-coral font-extrabold text-sm">🎮 综合闯关（推荐）</button>
         <button onclick="setLaunchMode('choice')" id="lm-choice" class="btn-3d min-h-[52px] rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-600 font-extrabold text-sm">🔤 中英互选</button>
-        <button onclick="setLaunchMode('photo')" id="lm-photo" class="btn-3d min-h-[52px] rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-600 font-extrabold text-sm">📸 看实景图说英语</button>
+        <button onclick="setLaunchMode('photo')" id="lm-photo" class="btn-3d min-h-[52px] rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-600 font-extrabold text-sm">🎨 看卡通图说英语</button>
         <button onclick="setLaunchMode('bilingual')" id="lm-bilingual" class="btn-3d min-h-[52px] rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-600 font-extrabold text-sm">🎙️ 双语语音快答</button>
       </div>
 
@@ -571,14 +587,27 @@
         <div id="imp-level-matrix" class="grid grid-cols-6 sm:grid-cols-9 gap-1.5"></div>
       </div>
 
-      <!-- 工具按钮 -->
-      <div class="flex flex-wrap gap-2 mb-3">
-        <button onclick="downloadCsvTemplate()" class="btn-3d min-h-[44px] px-4 rounded-xl bg-sky-50 text-sky-700 border border-sky-200 font-extrabold text-xs">📄 下载标准 CSV 模板（含 D–Z 示例）</button>
-        <button onclick="exportBackupJson()" class="btn-3d min-h-[44px] px-4 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 font-extrabold text-xs">💾 导出整库 JSON 备份</button>
-        <label class="btn-3d cursor-pointer min-h-[44px] px-4 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-extrabold text-xs flex items-center">
-          📁 上传 .csv / .json 文件
-          <input type="file" accept=".csv,.json,.txt" class="hidden" onchange="handleImportFile(event)" />
+      <!-- 快捷操作按钮 -->
+      <div class="flex flex-wrap items-center gap-2 mb-3">
+        <label class="btn-3d cursor-pointer min-h-[44px] px-4 rounded-2xl bg-sky-50 text-sky-700 border border-sky-200 font-extrabold text-xs flex items-center gap-1.5">
+          <span>📂 上传 CSV / JSON 文件</span>
+          <input type="file" accept=".csv,.json,.txt" onchange="handleImportFile(event)" class="hidden" />
         </label>
+        <button onclick="downloadCsvTemplate()" class="btn-3d min-h-[44px] px-4 rounded-2xl bg-amber-50 text-amber-800 border border-amber-200 font-extrabold text-xs">📄 下载 D–Z CSV 模板</button>
+        <button onclick="exportBackupJson()" class="btn-3d min-h-[44px] px-4 rounded-2xl bg-indigo-50 text-indigo-700 border border-indigo-200 font-extrabold text-xs">💾 导出整库 JSON 备份</button>
+      </div>
+
+      <!-- 图片渲染模式设置 -->
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-3 bg-amber-50/70 p-3 rounded-2xl border border-amber-200">
+        <span class="text-xs font-extrabold text-amber-900">🎨 插画显示模式：</span>
+        <div class="flex flex-wrap items-center gap-3">
+          <label class="flex items-center gap-1.5 text-xs font-extrabold text-slate-700 cursor-pointer">
+            <input type="radio" name="img-display-mode" value="cartoon" onchange="setImageDisplayMode('cartoon')" checked class="accent-amber-500" /> 纯本地卡通插画（极速离线·推荐）
+          </label>
+          <label class="flex items-center gap-1.5 text-xs font-extrabold text-slate-700 cursor-pointer">
+            <input type="radio" name="img-display-mode" value="custom" onchange="setImageDisplayMode('custom')" class="accent-sky-500" /> 优先显示导入的自定义图片
+          </label>
+        </div>
       </div>
 
       <!-- 导入模式 -->
@@ -790,24 +819,25 @@
     };
 
     /* =========================================================================
-       2. IndexedDB 持久化引擎 (RAZ_Adventure_Pro_DB)
+       2. IndexedDB 持久化引擎 (RAZ_Adventure_Pro_V2_DB)
        Stores: words, srs, photos, meta
     ========================================================================= */
-    const DB_NAME = 'RAZ_Adventure_Pro_DB';
-    const SEED_VERSION = 2;
+    const DB_NAME = 'RAZ_Adventure_Pro_V2_DB';
+    const SEED_VERSION = 3;
     let db = null;
 
     const app = {
       wordsByLevel: {},
       wordMap: new Map(),
       srsMap: new Map(),
-      photoCache: new Map(),
       meta: {
         seedVersion: 0,
         unlockedIdx: 0,
         parentMode: false,
         sound: true,
         stars: 0,
+        artStyle: 0,
+        imageMode: 'cartoon',
         alarmEnabled: true,
         alarmTime: localStorage.getItem('raz_alarm_time') || '19:30',
         alarmLastDate: ''
@@ -889,10 +919,10 @@
 
         rebuildIndexes(words);
         (await idbAll('srs')).forEach(r => app.srsMap.set(r.id, r));
-        (await idbAll('photos')).forEach(r => app.photoCache.set(r.word, { urls: r.urls || [], idx: r.idx || 0 }));
 
         document.getElementById('alarm-time').value = app.meta.alarmTime;
         document.getElementById('alarm-enabled').checked = !!app.meta.alarmEnabled;
+        syncImageModeRadios();
         populatePkLevelDropdown();
         renderAdventureMap();
         startAlarmTicker();
@@ -905,88 +935,538 @@
     }
 
     /* =========================================================================
-       3. 真实摄影照片自动匹配引擎 (Wikimedia Commons + 实景兜底 + IndexedDB 缓存)
+       3. 100% 本地离线卡通插画引擎 (CartoonArtEngine · 0ms 秒出图 · 严禁外网请求)
     ========================================================================= */
-    const photoPending = new Map();
+    const CARTOON_STYLES = [
+      { id: 'watercolor', name: '绘本水彩风', frame: 'border-amber-200 bg-[#FFFDF7]', badge: 'bg-amber-100 text-amber-800', shadow: 'drop-shadow(0 6px 10px rgba(180,120,60,0.18))' },
+      { id: 'candy', name: '糖果贴纸风', frame: 'border-pink-300 bg-gradient-to-br from-pink-50 to-sky-50', badge: 'bg-pink-100 text-pink-700', shadow: 'drop-shadow(0 0 0 4px #ffffff) drop-shadow(0 8px 12px rgba(236,72,153,0.22))' },
+      { id: 'pop', name: '活力波普风', frame: 'border-slate-800 border-[3px] bg-yellow-100', badge: 'bg-yellow-300 text-slate-900', shadow: 'drop-shadow(4px 4px 0px #1E293B)' },
+      { id: 'dreamy', name: '梦幻柔光风', frame: 'border-indigo-200 bg-gradient-to-br from-indigo-50 via-purple-50 to-teal-50', badge: 'bg-indigo-100 text-indigo-700', shadow: 'drop-shadow(0 0 14px rgba(129,140,248,0.45))' }
+    ];
 
-    function loremPhoto(word, seed = 1) {
-      return `https://loremflickr.com/600/400/${encodeURIComponent(word)}/all?lock=${seed}`;
-    }
+    // 高频核心名词手绘风 SVG 矢量插画（严禁包含任何英文单词文字）
+    const CUSTOM_SVGS = {
+      apple: `<g transform="translate(150,104)">
+        <path d="M-3,-46 C-2,-60 10,-66 18,-62" fill="none" stroke="#78350F" stroke-width="5" stroke-linecap="round"/>
+        <path d="M2,-48 C18,-66 42,-58 34,-42 C24,-34 10,-38 2,-48 Z" fill="#22C55E" stroke="#15803D" stroke-width="2.5"/>
+        <path d="M0,-38 C-28,-46 -52,-18 -46,16 C-40,46 -18,54 -4,46 C0,44 0,44 4,46 C18,54 40,46 46,16 C52,-18 28,-46 0,-38 Z" fill="#EF4444" stroke="#B91C1C" stroke-width="3"/>
+        <ellipse cx="-20" cy="-12" rx="8" ry="15" transform="rotate(-18 -20 -12)" fill="#FCA5A5" opacity="0.65"/>
+        <circle cx="-13" cy="6" r="4.5" fill="#1E293B"/><circle cx="13" cy="6" r="4.5" fill="#1E293B"/>
+        <circle cx="-11.5" cy="4.5" r="1.6" fill="#fff"/><circle cx="14.5" cy="4.5" r="1.6" fill="#fff"/>
+        <path d="M-7,17 Q0,24 7,17" fill="none" stroke="#7F1D1D" stroke-width="3" stroke-linecap="round"/>
+      </g>`,
+      cat: `<g transform="translate(150,106)">
+        <polygon points="-42,-16 -34,-54 -10,-32" fill="#FB923C" stroke="#C2410C" stroke-width="3" stroke-linejoin="round"/>
+        <polygon points="42,-16 34,-54 10,-32" fill="#FB923C" stroke="#C2410C" stroke-width="3" stroke-linejoin="round"/>
+        <polygon points="-34,-22 -30,-43 -16,-30" fill="#FDBA74"/>
+        <polygon points="34,-22 30,-43 16,-30" fill="#FDBA74"/>
+        <ellipse cx="0" cy="4" rx="46" ry="40" fill="#FB923C" stroke="#C2410C" stroke-width="3"/>
+        <path d="M-6,-34 L0,-22 L6,-34" fill="none" stroke="#C2410C" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="-16" cy="-2" r="6" fill="#1E293B"/><circle cx="16" cy="-2" r="6" fill="#1E293B"/>
+        <circle cx="-14" cy="-4" r="2.2" fill="#fff"/><circle cx="18" cy="-4" r="2.2" fill="#fff"/>
+        <polygon points="-5,8 5,8 0,14" fill="#F43F5E"/>
+        <path d="M-10,18 Q-5,24 0,18 Q5,24 10,18" fill="none" stroke="#7C2D12" stroke-width="2.8" stroke-linecap="round"/>
+        <line x1="-56" y1="6" x2="-30" y2="10" stroke="#7C2D12" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="-56" y1="16" x2="-30" y2="16" stroke="#7C2D12" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="56" y1="6" x2="30" y2="10" stroke="#7C2D12" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="56" y1="16" x2="30" y2="16" stroke="#7C2D12" stroke-width="2.5" stroke-linecap="round"/>
+      </g>`,
+      dog: `<g transform="translate(150,106)">
+        <ellipse cx="-42" cy="4" rx="16" ry="30" transform="rotate(14 -42 4)" fill="#92400E" stroke="#78350F" stroke-width="3"/>
+        <ellipse cx="42" cy="4" rx="16" ry="30" transform="rotate(-14 42 4)" fill="#92400E" stroke="#78350F" stroke-width="3"/>
+        <ellipse cx="0" cy="4" rx="44" ry="40" fill="#FDE68A" stroke="#B45309" stroke-width="3"/>
+        <ellipse cx="-16" cy="-4" rx="13" ry="11" fill="#D97706" opacity="0.45"/>
+        <circle cx="-15" cy="-4" r="5.5" fill="#1E293B"/><circle cx="15" cy="-4" r="5.5" fill="#1E293B"/>
+        <circle cx="-13.5" cy="-5.5" r="2" fill="#fff"/><circle cx="16.5" cy="-5.5" r="2" fill="#fff"/>
+        <ellipse cx="0" cy="10" rx="8" ry="6" fill="#1E293B"/>
+        <path d="M-8,20 Q0,28 8,20" fill="none" stroke="#78350F" stroke-width="3" stroke-linecap="round"/>
+        <path d="M-4,24 Q0,35 4,24" fill="#FB7185"/>
+      </g>`,
+      sun: `<g transform="translate(150,100)">
+        ${[0,30,60,90,120,150,180,210,240,270,300,330].map(a => `<line x1="0" y1="-48" x2="0" y2="-64" stroke="#F59E0B" stroke-width="6" stroke-linecap="round" transform="rotate(${a})"/>`).join('')}
+        <circle cx="0" cy="0" r="38" fill="#FACC15" stroke="#EA580C" stroke-width="3.5"/>
+        <circle cx="-13" cy="-5" r="4.5" fill="#7C2D12"/><circle cx="13" cy="-5" r="4.5" fill="#7C2D12"/>
+        <circle cx="-22" cy="5" r="5" fill="#FB7185" opacity="0.5"/><circle cx="22" cy="5" r="5" fill="#FB7185" opacity="0.5"/>
+        <path d="M-10,10 Q0,20 10,10" fill="none" stroke="#7C2D12" stroke-width="3" stroke-linecap="round"/>
+      </g>`,
+      moon: `<g transform="translate(154,100)">
+        <path d="M18,-46 A46,46 0 1,0 18,46 A35,35 0 1,1 18,-46 Z" fill="#FDE047" stroke="#CA8A04" stroke-width="3" stroke-linejoin="round"/>
+        <circle cx="-22" cy="-8" r="4" fill="#854D0E"/>
+        <path d="M-24,8 Q-14,16 -6,8" fill="none" stroke="#854D0E" stroke-width="2.8" stroke-linecap="round"/>
+        <polygon points="34,-28 38,-18 48,-18 40,-12 43,-2 34,-8 25,-2 28,-12 20,-18 30,-18" fill="#FEF08A"/>
+      </g>`,
+      star: `<g transform="translate(150,102)">
+        <polygon points="0,-54 15,-18 54,-14 24,11 33,49 0,29 -33,49 -24,11 -54,-14 -15,-18" fill="#FACC15" stroke="#D97706" stroke-width="3.5" stroke-linejoin="round"/>
+        <circle cx="-12" cy="-2" r="4.5" fill="#78350F"/><circle cx="12" cy="-2" r="4.5" fill="#78350F"/>
+        <path d="M-8,11 Q0,18 8,11" fill="none" stroke="#78350F" stroke-width="3" stroke-linecap="round"/>
+      </g>`,
+      car: `<g transform="translate(150,112)">
+        <path d="M-56,0 L-44,-28 C-38,-38 -28,-42 -12,-42 L18,-42 C32,-42 40,-34 48,-12 L62,-8 C70,-5 72,4 72,14 L72,22 L-68,22 L-68,8 C-68,2 -62,0 -56,0 Z" fill="#EF4444" stroke="#991B1B" stroke-width="3.5" stroke-linejoin="round"/>
+        <path d="M-34,-6 L-26,-32 L-2,-32 L-2,-6 Z" fill="#BAE6FD" stroke="#0284C7" stroke-width="2.5"/>
+        <path d="M6,-6 L6,-32 L26,-32 L36,-6 Z" fill="#BAE6FD" stroke="#0284C7" stroke-width="2.5"/>
+        <circle cx="-36" cy="24" r="16" fill="#1E293B" stroke="#0F172A" stroke-width="3"/><circle cx="-36" cy="24" r="7" fill="#CBD5E1"/>
+        <circle cx="38" cy="24" r="16" fill="#1E293B" stroke="#0F172A" stroke-width="3"/><circle cx="38" cy="24" r="7" fill="#CBD5E1"/>
+        <rect x="58" y="4" width="12" height="8" rx="3" fill="#FEF08A"/>
+      </g>`,
+      house: `<g transform="translate(150,112)">
+        <rect x="26" y="-50" width="16" height="32" rx="3" fill="#94A3B8" stroke="#475569" stroke-width="2.5"/>
+        <rect x="-48" y="-12" width="96" height="62" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="3.5"/>
+        <polygon points="-62,-10 0,-58 62,-10" fill="#F43F5E" stroke="#BE123C" stroke-width="3.5" stroke-linejoin="round"/>
+        <rect x="-14" y="14" width="28" height="36" rx="4" fill="#92400E" stroke="#78350F" stroke-width="2.5"/>
+        <circle cx="8" cy="34" r="3" fill="#FACC15"/>
+        <rect x="-38" y="4" width="18" height="18" rx="3" fill="#7DD3FC" stroke="#0284C7" stroke-width="2.5"/>
+        <rect x="20" y="4" width="18" height="18" rx="3" fill="#7DD3FC" stroke="#0284C7" stroke-width="2.5"/>
+      </g>`,
+      tree: `<g transform="translate(150,108)">
+        <rect x="-14" y="12" width="28" height="44" rx="5" fill="#92400E" stroke="#78350F" stroke-width="3"/>
+        <circle cx="0" cy="-24" r="36" fill="#22C55E" stroke="#15803D" stroke-width="3"/>
+        <circle cx="-28" cy="-4" r="28" fill="#4ADE80" stroke="#15803D" stroke-width="3"/>
+        <circle cx="28" cy="-4" r="28" fill="#4ADE80" stroke="#15803D" stroke-width="3"/>
+        <circle cx="-12" cy="-22" r="5" fill="#EF4444"/><circle cx="16" cy="-12" r="5" fill="#EF4444"/><circle cx="-18" cy="4" r="5" fill="#EF4444"/>
+      </g>`,
+      fish: `<g transform="translate(150,102)">
+        <polygon points="32,0 64,-26 56,0 64,26" fill="#F97316" stroke="#C2410C" stroke-width="3" stroke-linejoin="round"/>
+        <ellipse cx="-6" cy="0" rx="46" ry="30" fill="#38BDF8" stroke="#0369A1" stroke-width="3.5"/>
+        <path d="M-8,-28 Q6,-44 18,-24" fill="#F97316" stroke="#C2410C" stroke-width="2.5"/>
+        <path d="M-16,-24 Q-4,0 -16,24" fill="none" stroke="#0284C7" stroke-width="3.5"/>
+        <circle cx="-28" cy="-6" r="6" fill="#fff"/><circle cx="-30" cy="-6" r="3.5" fill="#0F172A"/>
+        <path d="M-44,8 Q-36,15 -28,10" fill="none" stroke="#0369A1" stroke-width="2.8" stroke-linecap="round"/>
+      </g>`,
+      bird: `<g transform="translate(150,104)">
+        <ellipse cx="0" cy="6" rx="38" ry="30" fill="#38BDF8" stroke="#0284C7" stroke-width="3.5"/>
+        <ellipse cx="8" cy="10" rx="22" ry="14" transform="rotate(-14 8 10)" fill="#7DD3FC" stroke="#0284C7" stroke-width="2.5"/>
+        <polygon points="-36,0 -56,6 -36,14" fill="#F59E0B" stroke="#B45309" stroke-width="2.5" stroke-linejoin="round"/>
+        <polygon points="34,2 56,-12 52,12" fill="#0284C7"/>
+        <circle cx="-18" cy="-4" r="5.5" fill="#0F172A"/><circle cx="-16.5" cy="-5.5" r="2" fill="#fff"/>
+        <line x1="-8" y1="36" x2="-8" y2="50" stroke="#D97706" stroke-width="3.5"/><line x1="10" y1="36" x2="10" y2="50" stroke="#D97706" stroke-width="3.5"/>
+      </g>`,
+      flower: `<g transform="translate(150,106)">
+        <line x1="0" y1="6" x2="0" y2="56" stroke="#16A34A" stroke-width="6" stroke-linecap="round"/>
+        <ellipse cx="-18" cy="34" rx="14" ry="8" transform="rotate(-25 -18 34)" fill="#22C55E" stroke="#15803D" stroke-width="2.5"/>
+        <ellipse cx="18" cy="34" rx="14" ry="8" transform="rotate(25 18 34)" fill="#22C55E" stroke="#15803D" stroke-width="2.5"/>
+        ${[0,60,120,180,240,300].map(a => `<ellipse cx="0" cy="-28" rx="16" ry="22" fill="#F472B6" stroke="#DB2777" stroke-width="2.5" transform="translate(0,-8) rotate(${a})"/>`).join('')}
+        <circle cx="0" cy="-8" r="18" fill="#FACC15" stroke="#D97706" stroke-width="3"/>
+        <circle cx="-6" cy="-11" r="2.8" fill="#78350F"/><circle cx="6" cy="-11" r="2.8" fill="#78350F"/>
+        <path d="M-5,-2 Q0,4 5,-2" fill="none" stroke="#78350F" stroke-width="2.5" stroke-linecap="round"/>
+      </g>`,
+      book: `<g transform="translate(150,104)">
+        <path d="M-58,-30 Q-28,-42 0,-26 Q28,-42 58,-30 L58,34 Q28,22 0,38 Q-28,22 -58,34 Z" fill="#FFFBEB" stroke="#1D4ED8" stroke-width="4" stroke-linejoin="round"/>
+        <line x1="0" y1="-26" x2="0" y2="38" stroke="#3B82F6" stroke-width="3"/>
+        <line x1="-44" y1="-12" x2="-14" y2="-10" stroke="#93C5FD" stroke-width="4" stroke-linecap="round"/>
+        <line x1="-44" y1="2" x2="-14" y2="4" stroke="#93C5FD" stroke-width="4" stroke-linecap="round"/>
+        <line x1="-44" y1="16" x2="-18" y2="18" stroke="#93C5FD" stroke-width="4" stroke-linecap="round"/>
+        <line x1="14" y1="-10" x2="44" y2="-12" stroke="#93C5FD" stroke-width="4" stroke-linecap="round"/>
+        <line x1="14" y1="4" x2="44" y2="2" stroke="#93C5FD" stroke-width="4" stroke-linecap="round"/>
+        <line x1="14" y1="18" x2="40" y2="16" stroke="#93C5FD" stroke-width="4" stroke-linecap="round"/>
+      </g>`,
+      ball: `<g transform="translate(150,102)">
+        <circle cx="0" cy="0" r="46" fill="#FFFFFF" stroke="#1E293B" stroke-width="3.5"/>
+        <path d="M-46,0 A46,46 0 0,1 0,-46 L0,0 Z" fill="#EF4444"/>
+        <path d="M46,0 A46,46 0 0,1 0,46 L0,0 Z" fill="#3B82F6"/>
+        <path d="M0,-46 A46,46 0 0,1 46,0 L0,0 Z" fill="#FACC15"/>
+        <circle cx="0" cy="0" r="11" fill="#FFFFFF" stroke="#1E293B" stroke-width="3"/>
+        <circle cx="0" cy="0" r="46" fill="none" stroke="#1E293B" stroke-width="3.5"/>
+      </g>`,
+      cake: `<g transform="translate(150,110)">
+        <rect x="-46" y="-4" width="92" height="44" rx="10" fill="#FDE68A" stroke="#D97706" stroke-width="3"/>
+        <path d="M-46,4 Q-30,18 -15,4 Q0,18 15,4 Q30,18 46,4 L46,-4 C46,-12 38,-14 30,-14 L-30,-14 C-38,-14 -46,-12 -46,-4 Z" fill="#F472B6" stroke="#DB2777" stroke-width="2.5"/>
+        <rect x="-5" y="-38" width="10" height="24" rx="3" fill="#38BDF8" stroke="#0284C7" stroke-width="2"/>
+        <path d="M0,-56 C8,-46 8,-38 0,-38 C-8,-38 -8,-46 0,-56 Z" fill="#FACC15" stroke="#EA580C" stroke-width="2"/>
+        <circle cx="-24" cy="-14" r="6" fill="#EF4444"/><circle cx="24" cy="-14" r="6" fill="#EF4444"/>
+      </g>`,
+      rain: `<g transform="translate(150,96)">
+        <path d="M-40,4 C-56,4 -60,-20 -42,-24 C-38,-44 -10,-48 2,-34 C16,-46 42,-36 42,-16 C56,-14 56,4 40,4 Z" fill="#94A3B8" stroke="#475569" stroke-width="3.5"/>
+        <path d="M-26,18 C-26,18 -34,34 -26,38 C-18,34 -26,18 -26,18 Z" fill="#38BDF8" stroke="#0284C7" stroke-width="2"/>
+        <path d="M0,24 C0,24 -8,40 0,44 C8,40 0,24 0,24 Z" fill="#38BDF8" stroke="#0284C7" stroke-width="2"/>
+        <path d="M26,18 C26,18 18,34 26,38 C34,34 26,18 26,18 Z" fill="#38BDF8" stroke="#0284C7" stroke-width="2"/>
+      </g>`,
+      boat: `<g transform="translate(150,108)">
+        <line x1="0" y1="-50" x2="0" y2="10" stroke="#78350F" stroke-width="4.5" stroke-linecap="round"/>
+        <polygon points="2,-48 44,4 2,4" fill="#FFFFFF" stroke="#94A3B8" stroke-width="2.5"/>
+        <polygon points="-2,-38 -36,4 -2,4" fill="#FDE047" stroke="#CA8A04" stroke-width="2.5"/>
+        <path d="M-54,10 L54,10 L38,38 L-38,38 Z" fill="#EF4444" stroke="#991B1B" stroke-width="3.5" stroke-linejoin="round"/>
+        <path d="M-68,42 Q-46,32 -24,42 Q0,52 24,42 Q46,32 68,42" fill="none" stroke="#0284C7" stroke-width="4.5" stroke-linecap="round"/>
+      </g>`,
+      hat: `<g transform="translate(150,108)">
+        <ellipse cx="0" cy="22" rx="64" ry="16" fill="#F59E0B" stroke="#B45309" stroke-width="3.5"/>
+        <path d="M-36,18 L-28,-32 C-24,-42 24,-42 28,-32 L36,18 Z" fill="#FBBF24" stroke="#B45309" stroke-width="3.5"/>
+        <path d="M-34,4 Q0,14 34,4 L36,16 Q0,26 -36,16 Z" fill="#EF4444"/>
+      </g>`,
+      bear: `<g transform="translate(150,106)">
+        <circle cx="-34" cy="-32" r="16" fill="#92400E" stroke="#78350F" stroke-width="3"/><circle cx="-34" cy="-32" r="8" fill="#FDE68A"/>
+        <circle cx="34" cy="-32" r="16" fill="#92400E" stroke="#78350F" stroke-width="3"/><circle cx="34" cy="-32" r="8" fill="#FDE68A"/>
+        <circle cx="0" cy="4" r="44" fill="#B45309" stroke="#78350F" stroke-width="3.5"/>
+        <ellipse cx="0" cy="16" rx="20" ry="15" fill="#FDE68A"/>
+        <circle cx="-16" cy="-6" r="5" fill="#1E293B"/><circle cx="16" cy="-6" r="5" fill="#1E293B"/>
+        <ellipse cx="0" cy="10" rx="7" ry="5" fill="#1E293B"/>
+        <path d="M-8,21 Q0,27 8,21" fill="none" stroke="#78350F" stroke-width="2.8" stroke-linecap="round"/>
+      </g>`,
+      duck: `<g transform="translate(150,106)">
+        <ellipse cx="6" cy="20" rx="40" ry="26" fill="#FACC15" stroke="#CA8A04" stroke-width="3.5"/>
+        <circle cx="-22" cy="-14" r="24" fill="#FACC15" stroke="#CA8A04" stroke-width="3.5"/>
+        <ellipse cx="-46" cy="-10" rx="14" ry="7" fill="#F97316" stroke="#C2410C" stroke-width="2.5"/>
+        <circle cx="-28" cy="-20" r="4.5" fill="#1E293B"/><circle cx="-26.5" cy="-21.5" r="1.5" fill="#fff"/>
+        <path d="M-6,14 Q14,4 30,22 Q10,30 -6,14 Z" fill="#FDE047" stroke="#CA8A04" stroke-width="2.5"/>
+      </g>`,
+      egg: `<g transform="translate(150,104)">
+        <path d="M0,-48 C28,-48 38,-4 38,16 C38,40 22,50 0,50 C-22,50 -38,40 -38,16 C-38,-4 -28,-48 0,-48 Z" fill="#FEF3C7" stroke="#D97706" stroke-width="3.5"/>
+        <ellipse cx="-14" cy="-14" rx="6" ry="14" transform="rotate(14 -14 -14)" fill="#FFFFFF" opacity="0.8"/>
+        <circle cx="-10" cy="10" r="4" fill="#78350F"/><circle cx="10" cy="10" r="4" fill="#78350F"/>
+        <path d="M-6,22 Q0,28 6,22" fill="none" stroke="#78350F" stroke-width="2.8" stroke-linecap="round"/>
+      </g>`,
+      kite: `<g transform="translate(150,96)">
+        <path d="M0,38 Q22,52 8,66 Q-6,76 16,82" fill="none" stroke="#64748B" stroke-width="3" stroke-linecap="round"/>
+        <polygon points="0,-46 38,-4 0,40 -38,-4" fill="#38BDF8" stroke="#0369A1" stroke-width="3.5" stroke-linejoin="round"/>
+        <polygon points="0,-46 38,-4 0,-4" fill="#F43F5E"/><polygon points="0,40 -38,-4 0,-4" fill="#FACC15"/>
+        <line x1="0" y1="-46" x2="0" y2="40" stroke="#1E293B" stroke-width="2.5"/>
+        <line x1="-38" y1="-4" x2="38" y2="-4" stroke="#1E293B" stroke-width="2.5"/>
+      </g>`,
+      leaf: `<g transform="translate(150,102)">
+        <path d="M-40,36 C-42,-16 0,-48 44,-40 C46,12 10,44 -40,36 Z" fill="#22C55E" stroke="#15803D" stroke-width="3.5"/>
+        <path d="M-48,44 Q0,0 38,-34" fill="none" stroke="#14532D" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="-12" y1="12" x2="-20" y2="-8" stroke="#14532D" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="6" y1="-4" x2="22" y2="4" stroke="#14532D" stroke-width="2.5" stroke-linecap="round"/>
+      </g>`,
+      umbrella: `<g transform="translate(150,106)">
+        <path d="M0,-42 L0,36 C0,48 -16,48 -16,38" fill="none" stroke="#78350F" stroke-width="5" stroke-linecap="round"/>
+        <path d="M-56,0 A56,48 0 0,1 56,0 Q38,-10 18,0 Q0,-10 -18,0 Q-38,-10 -56,0 Z" fill="#A855F7" stroke="#6B21A8" stroke-width="3.5" stroke-linejoin="round"/>
+        <path d="M-18,0 A56,48 0 0,1 0,-48 A56,48 0 0,1 18,0 Q0,-10 -18,0 Z" fill="#F472B6"/>
+      </g>`,
+      rocket: `<g transform="translate(150,102)">
+        <polygon points="-24,18 -44,38 -20,34" fill="#EF4444" stroke="#991B1B" stroke-width="2.5"/>
+        <polygon points="24,18 44,38 20,34" fill="#EF4444" stroke="#991B1B" stroke-width="2.5"/>
+        <path d="M0,-54 C24,-30 26,4 22,34 L-22,34 C-26,4 -24,-30 0,-54 Z" fill="#F8FAFC" stroke="#334155" stroke-width="3.5"/>
+        <path d="M-16,-32 Q0,-48 16,-32 Z" fill="#EF4444"/>
+        <circle cx="0" cy="-4" r="12" fill="#38BDF8" stroke="#0369A1" stroke-width="3"/>
+        <path d="M-10,36 Q0,62 10,36 Z" fill="#F97316"/>
+      </g>`
+    };
 
-    async function resolveRealPhoto(wordObj, forceNext = false) {
-      if (wordObj.imageUrl && wordObj.imageUrl.startsWith('http') && !forceNext) {
-        return wordObj.imageUrl;
+    // 颜色、数字、形状专属矢量渲染（严格防剧透）
+    const COLOR_MAP = {
+      red:'#EF4444', blue:'#3B82F6', green:'#22C55E', yellow:'#FACC15', orange:'#F97316',
+      purple:'#A855F7', pink:'#EC4899', black:'#1E293B', white:'#FFFFFF', brown:'#92400E', gray:'#94A3B8', gold:'#EAB308'
+    };
+    const NUMBER_MAP = {
+      zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10,
+      eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15, sixteen:16, twenty:20
+    };
+    const SHAPE_MAP = { circle:'circle', square:'square', triangle:'triangle', oval:'oval', heart:'heart', cube:'cube' };
+
+    // 全词库语义映射表：精准映射到高辨识度卡通视觉元素 + 分层场景分类
+    const WORD_VISUAL_GROUPS = {
+      animal: {
+        cat:'🐱', dog:'🐶', fish:'🐟', goat:'🐐', owl:'🦉', pig:'🐷', yak:'🐃', ant:'🐜', bear:'🐻', duck:'🦆',
+        frog:'🐸', ox:'🐂', rat:'🐀', cow:'🐄', hen:'🐔', chick:'🐥', sheep:'🐑', lamb:'🐑', horse:'🐴', pony:'🐴',
+        bee:'🐝', bug:'🐛', fly:'🪰', fox:'🦊', wolf:'🐺', deer:'🦌', lion:'🦁', tiger:'🐯', zebra:'🦓', panda:'🐼',
+        monkey:'🐵', rabbit:'🐰', mouse:'🐭', bird:'🐦', bat:'🦇', crab:'🦀', whale:'🐳', shark:'🦈', seal:'🦭', snail:'🐌',
+        worm:'🪱', snake:'🐍', turtle:'🐢', rooster:'🐓', turkey:'🦃', goose:'🪿', donkey:'🫏', mule:'🐴', calf:'🐮', foal:'🐴',
+        kitten:'🐱', puppy:'🐶', duckling:'🐥', swan:'🦢', robin:'🐦', crow:'🐦‍⬛', hawk:'🦅', dove:'🕊️', pigeon:'🕊️', parrot:'🦜',
+        penguin:'🐧', peacock:'🦚', camel:'🐪', giraffe:'🦒', hippo:'🦛', rhino:'🦏', elephant:'🐘', kangaroo:'🦘', koala:'🐨', sloth:'🦥',
+        otter:'🦦', beaver:'🦫', butterfly:'🦋', caterpillar:'🐛', ladybug:'🐞', dragonfly:'🪲', grasshopper:'🦗', cricket:'🦗', beetle:'🪲', firefly:'✨',
+        mosquito:'🦟', moth:'🦋', spider:'🕷️', scorpion:'🦂', centipede:'🐛', dolphin:'🐬', octopus:'🐙', squid:'🦑', jellyfish:'🪼', starfish:'⭐',
+        seahorse:'🐠', lobster:'🦞', shrimp:'🦐', clam:'🦪', oyster:'🦪', coral:'🪸', shell:'🐚', walrus:'🦭', manatee:'🦭', pelican:'🐦',
+        seagull:'🐦', flamingo:'🦩', squirrel:'🐿️', chipmunk:'🐿️', hedgehog:'🦔', raccoon:'🦝', skunk:'🦨', badger:'🦡', mole:'🐭', porcupine:'🦔',
+        armadillo:'🦔', platypus:'🦆', zoo:'🦁', nest:'🪺', web:'🕸️', mammal:'🐘', reptile:'🦎', predator:'🦁', prey:'🦌', carnivore:'🐯', herbivore:'🦒', omnivore:'🐻'
+      },
+      food: {
+        apple:'🍎', egg:'🥚', jam:'🍓', milk:'🥛', bread:'🍞', cake:'🍰', pie:'🥧', bun:'🥐', rice:'🍚', soup:'🍲',
+        meat:'🥩', ham:'🍖', corn:'🌽', pea:'🫛', bean:'🫘', nut:'🥜', pear:'🍐', plum:'🫐', peach:'🍑', grape:'🍇',
+        lemon:'🍋', lime:'🍋‍🟩', melon:'🍈', berry:'🫐', banana:'🍌', mango:'🥭', cherry:'🍒', carrot:'🥕', potato:'🥔', tomato:'🍅',
+        onion:'🧅', water:'💧', juice:'🧃', tea:'🍵', pizza:'🍕', burger:'🍔', hotdog:'🌭', sandwich:'🥪', pasta:'🍝', noodle:'🍜',
+        salad:'🥗', cheese:'🧀', butter:'🧈', yogurt:'🥛', honey:'🍯', sugar:'🍬', salt:'🧂', pepper:'🌶️', flour:'🌾', dough:'🥖',
+        toast:'🍞', pancake:'🥞', waffle:'🧇', cereal:'🥣', oatmeal:'🥣', cookie:'🍪', donut:'🍩', muffin:'🧁', cupcake:'🧁', candy:'🍬',
+        popcorn:'🍿', pretzel:'🥨', cracker:'🍘', chocolate:'🍫', strawberry:'🍓', blueberry:'🫐', raspberry:'🍓', pineapple:'🍍', watermelon:'🍉', coconut:'🥥',
+        papaya:'🥭', kiwi:'🥝', avocado:'🥑', apricot:'🍑', broccoli:'🥦', spinach:'🥬', cabbage:'🥬', lettuce:'🥬', celery:'🥬', cucumber:'🥒',
+        pumpkin:'🎃', squash:'🎃', radish:'🥕', turnip:'🥕', garlic:'🧄', ginger:'🫚', mushroom:'🍄', olive:'🫒', pickle:'🥒', peanut:'🥜',
+        walnut:'🌰', almond:'🥜', cashew:'🥜', chestnut:'🌰', grain:'🌾', dairy:'🥛', protein:'🍗', nutrition:'🥗'
+      },
+      vehicle: {
+        van:'🚐', car:'🚗', bus:'🚌', bike:'🚲', boat:'⛵', ship:'🚢', train:'🚂', truck:'🚚', plane:'✈️', taxi:'🚕',
+        sled:'🛷', tractor:'🚜', airplane:'✈️', jet:'✈️', rocket:'🚀', helicopter:'🚁', subway:'🚇', tram:'🚊', ferry:'⛴️', canoe:'🛶',
+        kayak:'🛶', yacht:'🛥️', sailboat:'⛵', raft:'🛶', scooter:'🛴', skateboard:'🛹', tricycle:'🚲', ambulance:'🚑', firetruck:'🚒', bulldozer:'🚜',
+        crane:'🏗️', towtruck:'🚚', spaceship:'🚀', submarine:'🚢', locomotive:'🚂', hovercraft:'🛥️', glider:'🛩️', parachute:'🪂', chariot:'🛞', wheel:'🛞'
+      },
+      weather: {
+        ice:'🧊', rain:'🌧️', sun:'☀️', moon:'🌙', star:'⭐', sky:'🌤️', cloud:'☁️', wind:'💨', snow:'❄️', fog:'🌫️',
+        sunshine:'☀️', rainbow:'🌈', puddle:'💧', shadow:'🌑', morning:'🌅', noon:'☀️', night:'🌃', spring:'🌸', summer:'☀️', autumn:'🍂',
+        winter:'⛄', storm:'⛈️', thunder:'⚡', lightning:'⚡', breeze:'🍃', frost:'❄️', hail:'🌨️', sleet:'🌧️', blizzard:'❄️', tornado:'🌪️',
+        hurricane:'🌀', flood:'🌊', drought:'🏜️', sunrise:'🌅', sunset:'🌇', twilight:'🌆', dawn:'🌅', planet:'🪐', earth:'🌍', mars:'🔴',
+        venus:'🟡', jupiter:'🪐', saturn:'🪐', comet:'☄️', meteor:'🌠', galaxy:'🌌', orbit:'🛰️', astronaut:'👨‍🚀', telescope:'🔭', snowman:'⛄',
+        snowball:'❄️', raindrop:'💧', eclipse:'🌘', satellite:'🛰️', asteroid:'☄️', universe:'🌌', climate:'🌍', temperature:'🌡️', thermometer:'🌡️'
+      },
+      nature: {
+        leaf:'🍃', tree:'🌳', mud:'🟤', sand:'🏖️', rock:'🪨', stone:'🪨', hill:'⛰️', pond:'🏞️', lake:'🏞️', river:'🏞️',
+        sea:'🌊', wave:'🌊', grass:'🌿', bush:'🌳', seed:'🌱', root:'🪴', log:'🪵', flower:'🌸', rose:'🌹', lily:'🌺',
+        daisy:'🌼', sunflower:'🌻', mountain:'🏔️', valley:'🏞️', canyon:'🏜️', desert:'🏜️', jungle:'🌴', forest:'🌲', meadow:'🌿', prairie:'🌾',
+        swamp:'🐊', marsh:'🌿', island:'🏝️', beach:'🏖️', coast:'🌊', cliff:'⛰️', cave:'🪨', stream:'🏞️', creek:'🏞️', glacier:'🧊',
+        volcano:'🌋', geyser:'⛲', acorn:'🌰', pinecone:'🌲', cactus:'🌵', bamboo:'🎋', palm:'🌴', oak:'🌳', pine:'🌲', maple:'🍁',
+        willow:'🌿', birch:'🌳', tulip:'🌷', orchid:'🌺', lotus:'🪷', clover:'🍀', fern:'🌿', moss:'🌿', vine:'🌿', thorn:'🌹',
+        petal:'🌸', pollen:'🌼', sprout:'🌱', bud:'🌷', branch:'🌿', trunk:'🪵', bark:'🪵', stump:'🪵', orchard:'🍎', vineyard:'🍇',
+        greenhouse:'🏡', harvest:'🌾', waterfall:'🏞️', magma:'🌋', lava:'🌋', iceberg:'🧊', crystal:'💎', fossil:'🦴', amber:'🟠'
+      },
+      home: {
+        box:'📦', jar:'🫙', key:'🔑', pan:'🍳', quilt:'🛏️', bed:'🛏️', chair:'🪑', table:'🪑', desk:'🪑', door:'🚪',
+        window:'🪟', wall:'🧱', floor:'🪵', roof:'🏠', rug:'🧶', lamp:'💡', clock:'⏰', sofa:'🛋️', bath:'🛁', sink:'🚰',
+        soap:'🧼', towel:'🧻', cup:'🥤', mug:'☕', bowl:'🥣', plate:'🍽️', spoon:'🥄', fork:'🍴', knife:'🔪', pot:'🍲',
+        lid:'🍲', can:'🥫', bag:'👜', bin:'🗑️', mat:'🧶', fan:'🪭', bell:'🔔', house:'🏠', home:'🏡', room:'🛋️',
+        kitchen:'🍳', bedroom:'🛏️', yard:'🏡', garden:'🌻', porch:'🏡', garage:'🏠', attic:'🏠', stairs:'🪜', hall:'🚪', closet:'🚪',
+        shelf:'📚', mirror:'🪞', pillow:'🛏️', blanket:'🛏️', sheet:'🛏️', curtain:'🪟', couch:'🛋️', oven:'🔥', stove:'🍳', fridge:'🧊',
+        toaster:'🍞', kettle:'🫖', broom:'🧹', mop:'🧹', bucket:'🪣', sponge:'🧽', trash:'🗑️', toothbrush:'🪥', toothpaste:'🪥', hairbrush:'🪮',
+        bathroom:'🛁', doorbell:'🔔', mailbox:'📬', lantern:'🏮', candle:'🕯️', balloon:'🎈', present:'🎁', gift:'🎁', hammer:'🔨', nail:'🔩',
+        screw:'🔩', wrench:'🔧', pliers:'🔧', saw:'🪚', drill:'🪛', axe:'🪓', shovel:'🪏', ladder:'🪜', rope:'🪢', chain:'⛓️',
+        hook:'🪝', gear:'⚙️', magnet:'🧲', battery:'🔋', bulb:'💡', compass:'🧭', camera:'📷', photo:'🖼️', frame:'🖼️', coin:'🪙'
+      },
+      school: {
+        ink:'🖋️', book:'📖', pen:'🖊️', pencil:'✏️', paper:'📄', glue:'🧴', tape:'🩹', ruler:'📏', crayon:'🖍️', paint:'🎨',
+        brush:'🖌️', chalk:'🖍️', board:'📋', school:'🏫', class:'🏫', teacher:'👩‍🏫', student:'🧑‍🎓', friend:'🤝', locker:'🗄️', backpack:'🎒',
+        notebook:'📓', eraser:'🧽', scissors:'✂️', marker:'🖍️', folder:'📁', globe:'🌍', map:'🗺️', chart:'📊', puzzle:'🧩', block:'🧱',
+        doll:'🪆', teddy:'🧸', wagon:'🛒', classroom:'🏫', lunchbox:'🍱', bookshelf:'📚', calendar:'📅', microscope:'🔬', trophy:'🏆', medal:'🏅',
+        ticket:'🎫', stamp:'📮', card:'💌', drum:'🥁', piano:'🎹', violin:'🎻', guitar:'🎸', cello:'🎻', harp:'🎵', flute:'🪈',
+        trumpet:'🎺', saxophone:'🎷', banjo:'🪕', accordion:'🪗', melody:'🎵', rhythm:'🎶', concert:'🎤', painting:'🖼️', statue:'🗿', pottery:'🏺',
+        mask:'🎭', stage:'🎭', kite:'🪁', top:'🪀'
+      },
+      body: {
+        hat:'👒', vest:'🦺', wig:'💇', ear:'👂', hand:'✋', leg:'🦵', nose:'👃', eye:'👁️', mouth:'👄', arm:'💪',
+        foot:'🦶', feet:'🦶', head:'🗣️', hair:'💇', face:'😊', chin:'🙂', neck:'🧣', knee:'🦵', toe:'🦶', finger:'👆',
+        tooth:'🦷', lip:'👄', back:'🧍', coat:'🧥', shirt:'👕', pants:'👖', shorts:'🩳', dress:'👗', skirt:'👗', sock:'🧦',
+        shoe:'👟', boot:'🥾', belt:'👖', scarf:'🧣', glove:'🧤', mitten:'🧤', cap:'🧢', hood:'🧥', pocket:'👖', button:'🔘',
+        zipper:'🧥', ribbon:'🎀', glasses:'👓', raincoat:'🧥', helmet:'⛑️', goggles:'🥽', bandage:'🩹', medicine:'💊', wheelchair:'♿', syringe:'💉',
+        mom:'👩', dad:'👨', baby:'👶', sister:'👧', brother:'👦', grandma:'👵', grandpa:'👴', aunt:'👩', uncle:'👨', family:'👨‍👩‍👧‍👦',
+        girl:'👧', boy:'👦', queen:'👸', king:'🤴', prince:'🤴', doctor:'👨‍⚕️', nurse:'👩‍⚕️', dentist:'🦷', vet:'🩺', chef:'👨‍🍳',
+        baker:'🧑‍🍳', farmer:'🧑‍🌾', pilot:'🧑‍✈️', driver:'🚗', sailor:'⛵', police:'👮', fireman:'🧑‍🚒', artist:'🧑‍🎨', singer:'🧑‍🎤', dancer:'💃',
+        actor:'🎭', writer:'✍️', builder:'👷', barber:'💈', guard:'💂', coach:'📣', judge:'⚖️', skeleton:'🦴', muscle:'💪', lungs:'🫁'
+      },
+      sport: {
+        ball:'⚽', swing:'🛝', slide:'🛝', seesaw:'🛝', park:'🏞️', playground:'🛝', soccer:'⚽', football:'🏈', baseball:'⚾', basketball:'🏀',
+        tennis:'🎾', golf:'⛳', hockey:'🏒', bowling:'🎳', boxing:'🥊', skiing:'⛷️', skating:'⛸️', surfing:'🏄', diving:'🤿', fishing:'🎣',
+        camping:'⛺', hiking:'🥾', cycling:'🚴', jogging:'🏃', rowing:'🚣', archery:'🏹', stadium:'🏟️', exercise:'🏋️', picnic:'🧺', barbecue:'🍖',
+        birthday:'🎂', party:'🎉', firework:'🎆', confetti:'🎊', parade:'🥁', carnival:'🎡', festival:'🏮', wedding:'💒'
+      },
+      place: {
+        bench:'🪑', path:'🛤️', gate:'⛩️', fence:'🚧', bridge:'🌉', road:'🛣️', street:'🏙️', sign:'🪧', light:'🚦', store:'🏪',
+        shop:'🛍️', farm:'🚜', barn:'🏚️', hay:'🌾', field:'🌾', library:'📚', hospital:'🏥', clinic:'🏥', bank:'🏦', bakery:'🥐',
+        market:'🛒', grocery:'🛒', museum:'🏛️', theater:'🎭', cinema:'🎬', airport:'🛫', station:'🚉', harbor:'⚓', factory:'🏭', office:'🏢',
+        hotel:'🏨', cafe:'☕', castle:'🏰', palace:'🏯', lighthouse:'🗼', windmill:'🌬️', pyramid:'🏜️', cathedral:'⛪', pagoda:'🏯', treasure:'💎'
+      },
+      action: {
+        run:'🏃', jump:'🦘', walk:'🚶', hop:'🐇', skip:'🏃', swim:'🏊', climb:'🧗', sit:'🪑', stand:'🧍', sleep:'😴',
+        eat:'🍽️', drink:'🥤', cook:'🍳', bake:'🧁', cut:'✂️', mix:'🥣', pour:'🫗', wash:'🧼', dry:'☀️', clean:'🧹',
+        read:'📖', write:'✍️', draw:'🎨', sing:'🎤', dance:'💃', play:'🎮', kick:'⚽', throw:'⚾', catch:'🧤', hit:'🏏',
+        push:'🫸', pull:'🫷', lift:'🏋️', carry:'📦', drop:'⬇️', open:'📖', close:'📕', lock:'🔒', turn:'🔄', spin:'🌀',
+        look:'👀', see:'👀', watch:'📺', hear:'👂', listen:'🎧', smell:'👃', taste:'😋', touch:'👆', feel:'💓', hold:'🤝',
+        smile:'😊', laugh:'😂', cry:'😢', yawn:'🥱', clap:'👏', wave:'👋', hug:'🤗', kiss:'😘', help:'🤝', share:'🤲',
+        give:'🎁', take:'✋', make:'🛠️', build:'🏗️', fix:'🔧', dig:'🪏', plant:'🌱', grow:'🌿', pick:'🍎', feed:'🍼',
+        happy:'😄', sad:'😢', mad:'😠', glad:'😊', kind:'💖', sweet:'🍬', sour:'🍋', salty:'🥨', fresh:'🌿', brave:'🦸',
+        shy:'😳', proud:'😎', calm:'😌', scared:'😱', excited:'🤩', bored:'🥱', tired:'😫', hungry:'🤤', thirsty:'🥤', sleepy:'😴',
+        dizzy:'😵', silly:'🤪', clever:'🧠', gentle:'🕊️', curious:'🧐', big:'🐘', small:'🐜', tall:'🦒', short:'🐛', fast:'⚡',
+        slow:'🐢', hot:'🔥', cold:'🥶', warm:'☀️', cool:'❄️', loud:'📢', quiet:'🤫', bright:'✨', dark:'🌑', recycle:'♻️',
+        discover:'🔍', explore:'🧭', invent:'💡', create:'🎨', measure:'📏', weigh:'⚖️', protect:'🛡️', rescue:'🚑', celebrate:'🎉', adventure:'🗺️'
       }
-      const key = wordObj.en.toLowerCase().trim();
-      let cached = app.photoCache.get(key);
+    };
 
-      if (cached && cached.urls.length > 0 && !forceNext) {
-        return cached.urls[cached.idx % cached.urls.length];
-      }
+    // 构建扁平快速查表：word -> { cat, icon }
+    const WORD_VISUAL_INDEX = {};
+    Object.entries(WORD_VISUAL_GROUPS).forEach(([cat, dict]) => {
+      Object.entries(dict).forEach(([w, icon]) => { WORD_VISUAL_INDEX[w] = { cat, icon }; });
+    });
 
-      if (cached && forceNext) {
-        cached.idx = (cached.idx + 1) % (cached.urls.length + 1);
-        if (cached.idx < cached.urls.length) {
-          idbPut('photos', { word: key, urls: cached.urls, idx: cached.idx }).catch(() => {});
-          return cached.urls[cached.idx];
+    const CartoonArtEngine = {
+      classify(wordObj) {
+        const key = (wordObj.en || '').toLowerCase().trim();
+        if (CUSTOM_SVGS[key]) {
+          const cat = WORD_VISUAL_INDEX[key]?.cat || 'nature';
+          return { kind: 'svg', cat, key };
         }
-        return loremPhoto(wordObj.en, Math.floor(Math.random() * 900) + 10);
-      }
+        if (COLOR_MAP[key]) return { kind: 'color', cat: 'school', hex: COLOR_MAP[key], key };
+        if (NUMBER_MAP[key] !== undefined) return { kind: 'number', cat: 'school', num: NUMBER_MAP[key], key };
+        if (SHAPE_MAP[key]) return { kind: 'shape', cat: 'school', shape: SHAPE_MAP[key], key };
+        if (WORD_VISUAL_INDEX[key]) return { kind: 'emoji', cat: WORD_VISUAL_INDEX[key].cat, icon: WORD_VISUAL_INDEX[key].icon };
 
-      if (photoPending.has(key)) return photoPending.get(key);
+        // 针对 D-Z 或用户新导入词汇的智能中文语义兜底匹配
+        const zh = wordObj.zh || '';
+        if (/[猫狗鸟鱼虫龙虎熊鹿象动物兽物种]/.test(zh)) return { kind: 'emoji', cat: 'animal', icon: '🐾' };
+        if (/[果菜肉饭面糖茶水食营养]/.test(zh)) return { kind: 'emoji', cat: 'food', icon: '🍱' };
+        if (/[车船飞艇火箭机轮]/.test(zh)) return { kind: 'emoji', cat: 'vehicle', icon: '🚀' };
+        if (/[星月日雨雪风气候云天气宇宙]/.test(zh)) return { kind: 'emoji', cat: 'weather', icon: '🌤️' };
+        if (/[山河海林花草树石火山冰生态]/.test(zh)) return { kind: 'emoji', cat: 'nature', icon: '🌿' };
+        if (/[音曲画诗书学词演艺术]/.test(zh)) return { kind: 'emoji', cat: 'school', icon: '🎨' };
+        if (/[电光磁力量化分原实验科学算法]/.test(zh)) return { kind: 'emoji', cat: 'weather', icon: '🔬' };
+        if (/[城国政法经史建筑宫殿塔]/.test(zh)) return { kind: 'emoji', cat: 'place', icon: '🏛️' };
+        return { kind: 'emoji', cat: 'action', icon: '✨' };
+      },
 
-      const p = (async () => {
-        const urls = [];
-        try {
-          const api = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(wordObj.en + ' photo')}&gsrlimit=5&prop=imageinfo&iiprop=url&iiurlwidth=600&format=json&origin=*`;
-          const res = await fetch(api);
-          if (res.ok) {
-            const data = await res.json();
-            const pages = data?.query?.pages;
-            if (pages) {
-              Object.values(pages).forEach(pg => {
-                const title = (pg.title || '').toLowerCase();
-                const u = pg?.imageinfo?.[0]?.thumburl || pg?.imageinfo?.[0]?.url || '';
-                const lu = u.toLowerCase();
-                const isRaster = /\.(jpg|jpeg|png)(\?|$)/i.test(lu) || lu.includes('.jpg/') || lu.includes('.jpeg/');
-                const notNonPhoto = !title.includes('icon') && !title.includes('logo') && !title.includes('diagram') && !title.includes('map') && !title.includes('chart') && !lu.endsWith('.svg');
-                if (u && isRaster && notNonPhoto) urls.push(u);
-              });
-            }
-          }
-        } catch (e) {} finally { photoPending.delete(key); }
-
-        if (urls.length === 0) urls.push(loremPhoto(wordObj.en, key.length * 17 + 3));
-        const entry = { word: key, urls: Array.from(new Set(urls)), idx: 0 };
-        app.photoCache.set(key, entry);
-        idbPut('photos', entry).catch(() => {});
-        return entry.urls[0];
-      })();
-
-      photoPending.set(key, p);
-      return p;
-    }
-
-    function bindRealPhoto(imgId, wordObj, forceNext = false) {
-      const img = document.getElementById(imgId);
-      if (!img) return;
-      img.classList.add('photo-skeleton');
-      resolveRealPhoto(wordObj, forceNext).then(url => {
-        const el = document.getElementById(imgId);
-        if (!el) return;
-        el.onload = () => el.classList.remove('photo-skeleton');
-        el.onerror = () => {
-          el.onerror = null;
-          el.classList.remove('photo-skeleton');
-          el.src = `https://placehold.co/600x400/FEF3C7/92400E?text=${encodeURIComponent(wordObj.en)}`;
+      // 分层绘本矢量场景背景（随语义分类与 4 种画风动态变化）
+      sceneBg(cat, styleIdx) {
+        const palettes = {
+          animal:  ['#BAE6FD', '#E0F2FE', '#86EFAC', '#4ADE80'],
+          nature:  ['#BAE6FD', '#FEF9C3', '#86EFAC', '#22C55E'],
+          food:    ['#FEF3C7', '#FFEDD5', '#FDBA74', '#FB923C'],
+          vehicle: ['#BAE6FD', '#E0F2FE', '#CBD5E1', '#94A3B8'],
+          weather: ['#C7D2FE', '#E0E7FF', '#A5B4FC', '#818CF8'],
+          home:    ['#FFEDD5', '#FEF3C7', '#FDE68A', '#F59E0B'],
+          school:  ['#E0F2FE', '#FEF9C3', '#BAE6FD', '#38BDF8'],
+          body:    ['#FCE7F3', '#FFE4E6', '#FBCFE8', '#F472B6'],
+          sport:   ['#DCFCE7', '#FEF9C3', '#86EFAC', '#4ADE80'],
+          place:   ['#E0F2FE', '#F1F5F9', '#CBD5E1', '#64748B'],
+          action:  ['#FEF3C7', '#FCE7F3', '#FDE68A', '#FB7185']
         };
-        el.src = url;
-      });
+        const [c1, c2, g1, g2] = palettes[cat] || palettes.nature;
+        const gid = `g_${cat}_${styleIdx}_${Math.floor(Math.random() * 9999)}`;
+
+        let patternOverlay = '';
+        if (styleIdx === 1) {
+          // 糖果贴纸风：闪亮小星星
+          patternOverlay = `<circle cx="38" cy="34" r="5" fill="#fff" opacity="0.7"/><circle cx="264" cy="40" r="7" fill="#fff" opacity="0.65"/><circle cx="250" cy="154" r="4" fill="#fff" opacity="0.7"/>`;
+        } else if (styleIdx === 2) {
+          // 活力波普风：波点网纹
+          patternOverlay = `<g fill="#1E293B" opacity="0.08">${[30,70,110,150,190,230,270].map(x => `<circle cx="${x}" cy="24" r="4"/><circle cx="${x-15}" cy="54" r="4"/>`).join('')}</g>`;
+        } else if (styleIdx === 3) {
+          // 梦幻柔光风：柔和光斑
+          patternOverlay = `<circle cx="52" cy="42" r="34" fill="#fff" opacity="0.32"/><circle cx="252" cy="48" r="42" fill="#E879F9" opacity="0.18"/><circle cx="220" cy="160" r="28" fill="#38BDF8" opacity="0.18"/>`;
+        }
+
+        let scenery = '';
+        if (cat === 'animal' || cat === 'nature' || cat === 'sport') {
+          scenery = `
+            <g fill="#FFFFFF" opacity="0.85">
+              <ellipse cx="62" cy="42" rx="26" ry="12"/><ellipse cx="78" cy="36" rx="18" ry="11"/>
+              <ellipse cx="236" cy="38" rx="24" ry="10"/><ellipse cx="220" cy="34" rx="16" ry="9"/>
+            </g>
+            <path d="M0,156 Q75,128 150,150 Q225,172 300,144 L300,200 L0,200 Z" fill="${g1}"/>
+            <path d="M0,170 Q110,146 210,168 Q260,178 300,164 L300,200 L0,200 Z" fill="${g2}" opacity="0.45"/>`;
+        } else if (cat === 'food' || cat === 'home') {
+          scenery = `
+            <rect x="0" y="146" width="300" height="54" fill="${g1}" opacity="0.55"/>
+            <line x1="0" y1="146" x2="300" y2="146" stroke="${g2}" stroke-width="3" opacity="0.5"/>
+            <ellipse cx="150" cy="166" rx="92" ry="16" fill="#FFFFFF" opacity="0.55"/>`;
+        } else if (cat === 'vehicle') {
+          scenery = `
+            <ellipse cx="64" cy="36" rx="24" ry="10" fill="#fff" opacity="0.85"/>
+            <ellipse cx="236" cy="44" rx="26" ry="11" fill="#fff" opacity="0.85"/>
+            <rect x="0" y="148" width="300" height="52" fill="${g1}"/>
+            <line x1="18" y1="174" x2="282" y2="174" stroke="#FFFFFF" stroke-width="4" stroke-dasharray="22 18" stroke-linecap="round"/>`;
+        } else if (cat === 'weather') {
+          scenery = `
+            <circle cx="48" cy="40" r="3" fill="#FFF"/><circle cx="96" cy="24" r="2.5" fill="#FEF08A"/>
+            <circle cx="242" cy="32" r="3.5" fill="#FFF"/><circle cx="268" cy="76" r="2.5" fill="#FEF08A"/>
+            <path d="M0,164 Q80,142 160,160 Q235,176 300,154 L300,200 L0,200 Z" fill="${g1}" opacity="0.55"/>`;
+        } else {
+          scenery = `
+            <circle cx="150" cy="102" r="68" fill="#FFFFFF" opacity="0.48"/>
+            <path d="M0,162 Q150,138 300,162 L300,200 L0,200 Z" fill="${g1}" opacity="0.55"/>`;
+        }
+
+        return `<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${c1}"/><stop offset="100%" stop-color="${c2}"/></linearGradient></defs>
+          <rect width="300" height="200" fill="url(#${gid})"/>${scenery}${patternOverlay}`;
+      },
+
+      renderMainSubject(info) {
+        if (info.kind === 'svg') return CUSTOM_SVGS[info.key];
+
+        if (info.kind === 'color') {
+          const stroke = info.hex === '#FFFFFF' ? '#94A3B8' : '#1E293B';
+          return `<g transform="translate(150,100)">
+            <path d="M0,-54 C28,-54 56,-28 52,4 C48,36 22,52 -8,50 C-38,48 -58,24 -52,-8 C-46,-36 -26,-54 0,-54 Z" fill="${info.hex}" stroke="${stroke}" stroke-width="3.5"/>
+            <circle cx="-15" cy="-4" r="5" fill="${info.hex === '#1E293B' ? '#FFFFFF' : '#1E293B'}"/>
+            <circle cx="15" cy="-4" r="5" fill="${info.hex === '#1E293B' ? '#FFFFFF' : '#1E293B'}"/>
+            <path d="M-9,12 Q0,21 9,12" fill="none" stroke="${info.hex === '#1E293B' ? '#FFFFFF' : '#1E293B'}" stroke-width="3.2" stroke-linecap="round"/>
+          </g>`;
+        }
+
+        if (info.kind === 'number') {
+          const dots = Math.min(info.num, 10);
+          const dotSvgs = Array.from({ length: dots }, (_, i) => {
+            const x = 150 + (i - (dots - 1) / 2) * 20;
+            return `<circle cx="${x}" cy="160" r="6" fill="#F59E0B" stroke="#B45309" stroke-width="2"/>`;
+          }).join('');
+          return `<g>
+            <circle cx="150" cy="88" r="52" fill="#FFFFFF" stroke="#F59E0B" stroke-width="5"/>
+            <text x="150" y="108" text-anchor="middle" font-size="60" font-weight="900" fill="#EA580C" font-family="Inter, sans-serif">${info.num}</text>
+            ${dotSvgs}
+          </g>`;
+        }
+
+        if (info.kind === 'shape') {
+          const face = `<circle cx="-13" cy="-4" r="4.5" fill="#1E293B"/><circle cx="13" cy="-4" r="4.5" fill="#1E293B"/><path d="M-8,11 Q0,18 8,11" fill="none" stroke="#1E293B" stroke-width="3" stroke-linecap="round"/>`;
+          if (info.shape === 'circle') return `<g transform="translate(150,100)"><circle r="48" fill="#38BDF8" stroke="#0369A1" stroke-width="4"/>${face}</g>`;
+          if (info.shape === 'square') return `<g transform="translate(150,100)"><rect x="-44" y="-44" width="88" height="88" rx="12" fill="#4ADE80" stroke="#15803D" stroke-width="4"/>${face}</g>`;
+          if (info.shape === 'triangle') return `<g transform="translate(150,108)"><polygon points="0,-58 54,36 -54,36" fill="#FACC15" stroke="#B45309" stroke-width="4" stroke-linejoin="round"/>${face}</g>`;
+          if (info.shape === 'oval') return `<g transform="translate(150,100)"><ellipse rx="58" ry="38" fill="#C084FC" stroke="#7E22CE" stroke-width="4"/>${face}</g>`;
+          if (info.shape === 'heart') return `<g transform="translate(150,102)"><path d="M0,44 C-56,8 -58,-44 -24,-44 C-8,-44 0,-30 0,-22 C0,-30 8,-44 24,-44 C58,-44 56,8 0,44 Z" fill="#FB7185" stroke="#BE123C" stroke-width="4"/>${face}</g>`;
+          return `<g transform="translate(150,104)"><polygon points="-36,-18 0,-38 36,-18 36,24 0,44 -36,24" fill="#60A5FA" stroke="#1D4ED8" stroke-width="3.5"/><line x1="0" y1="-38" x2="0" y2="4" stroke="#1D4ED8" stroke-width="2.5"/><line x1="-36" y1="-18" x2="0" y2="4" stroke="#1D4ED8" stroke-width="2.5"/><line x1="36" y1="-18" x2="0" y2="4" stroke="#1D4ED8" stroke-width="2.5"/></g>`;
+        }
+
+        return '';
+      },
+
+      renderCard(wordObj, opts = {}) {
+        const styleIdx = (app.meta.artStyle || 0) % CARTOON_STYLES.length;
+        const st = CARTOON_STYLES[styleIdx];
+
+        // 若开启“优先显示导入的自定义图片”且该词带有有效 URL / Base64，则直接显示自定义图，失败自动降级回本地卡通画
+        if (app.meta.imageMode === 'custom' && wordObj.imageUrl && (/^(https?:\/\/|data:image\/)/i.test(wordObj.imageUrl))) {
+          const fallbackId = `cfb_${Math.random().toString(36).slice(2, 8)}`;
+          return `
+            <div class="w-full h-full relative overflow-hidden ${st.frame}">
+              <img src="${wordObj.imageUrl}" alt="" class="w-full h-full object-cover" onerror="this.style.display='none'; document.getElementById('${fallbackId}').classList.remove('hidden');" />
+              <div id="${fallbackId}" class="hidden w-full h-full">${this.renderSvgMarkup(wordObj, styleIdx, opts)}</div>
+            </div>`;
+        }
+        return this.renderSvgMarkup(wordObj, styleIdx, opts);
+      },
+
+      renderSvgMarkup(wordObj, styleIdx, opts = {}) {
+        const st = CARTOON_STYLES[styleIdx];
+        const info = this.classify(wordObj);
+        const bg = this.sceneBg(info.cat, styleIdx);
+        const subjectSvg = this.renderMainSubject(info);
+        const emojiSize = opts.compact ? 'text-6xl sm:text-7xl' : 'text-7xl sm:text-8xl';
+
+        return `
+          <div class="w-full h-full relative overflow-hidden flex items-center justify-center ${st.frame} cartoon-pop select-none">
+            <svg viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice" class="w-full h-full block">
+              ${bg}
+              ${subjectSvg ? `<g class="cartoon-float" style="filter:${st.shadow}">${subjectSvg}</g>` : ''}
+            </svg>
+            ${!subjectSvg ? `
+              <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div class="cartoon-float leading-none ${emojiSize}" style="filter:${st.shadow}">${info.icon}</div>
+              </div>` : ''}
+          </div>`;
+      }
+    };
+
+    function cycleGlobalArtStyle(refreshAlbum = false) {
+      app.meta.artStyle = ((app.meta.artStyle || 0) + 1) % CARTOON_STYLES.length;
+      saveMeta();
+      const name = CARTOON_STYLES[app.meta.artStyle].name;
+      const lbl = document.getElementById('album-style-name');
+      if (lbl) lbl.textContent = name;
+      showToast(`🎨 已切换卡通画风：${name}`, 'info');
+      if (refreshAlbum) renderAlbumGrid();
     }
 
-    function switchCardPhoto(imgId, wordId) {
+    function switchQuestionArtStyle(boxId, wordId) {
+      app.meta.artStyle = ((app.meta.artStyle || 0) + 1) % CARTOON_STYLES.length;
+      saveMeta();
       const w = app.wordMap.get(wordId);
-      if (w) { bindRealPhoto(imgId, w, true); showToast('正在切换真实摄影图...', 'info'); }
+      const box = document.getElementById(boxId);
+      if (w && box) {
+        box.innerHTML = CartoonArtEngine.renderCard(w, { antiSpoiler: true });
+        showToast(`🎨 已切换画风：${CARTOON_STYLES[app.meta.artStyle].name}`, 'info');
+      }
+    }
+
+    function setImageDisplayMode(mode) {
+      app.meta.imageMode = mode;
+      saveMeta();
+      showToast(mode === 'cartoon' ? '🎨 已切换为：纯本地卡通插画（极速离线）' : '🖼️ 已切换为：优先显示导入的自定义图片', 'info');
+    }
+
+    function syncImageModeRadios() {
+      const m = app.meta.imageMode || 'cartoon';
+      document.querySelectorAll('input[name="img-display-mode"]').forEach(r => { r.checked = (r.value === m); });
     }
 
     /* =========================================================================
@@ -1291,7 +1771,7 @@
       const badges = {
         mc_en_zh: ['🔤 中英互选 · 英选汉', 'bg-sky-100 text-sky-700'],
         mc_zh_en: ['🔤 中英互选 · 汉选英', 'bg-indigo-100 text-indigo-700'],
-        photo_en: ['📸 看实景图说英语', 'bg-rose-100 text-rose-700'],
+        photo_en: ['🎨 看卡通图说英语', 'bg-rose-100 text-rose-700'],
         voice_en_zh: ['🎙️ 双语语音 · 看英说汉', 'bg-emerald-100 text-emerald-700'],
         voice_zh_en: ['🎙️ 双语语音 · 看汉说英', 'bg-amber-100 text-amber-800']
       };
@@ -1327,24 +1807,29 @@
       } else {
         const isPhoto = q.type === 'photo_en';
         const expectLang = q.type === 'voice_en_zh' ? 'zh-CN' : 'en-US';
-        const promptHint = isPhoto ? '请看着真实照片，大声说出对应的英文单词' : (expectLang === 'zh-CN' ? '请大声说出这个英文单词的中文意思' : '请大声说出这个中文对应的英文单词');
+        const promptHint = isPhoto ? '请看着卡通插画，大声说出对应的英文单词' : (expectLang === 'zh-CN' ? '请大声说出这个英文单词的中文意思' : '请大声说出这个中文对应的英文单词');
 
         card.innerHTML = `
           <div class="animate-pop flex flex-col h-full justify-between">
-            <div class="flex justify-between items-center mb-3">
+            <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
               <span class="px-3.5 py-1 rounded-full text-xs font-extrabold ${bCls}">${bTxt}</span>
-              <div class="flex items-center gap-2">
-                ${isPhoto ? `<button onclick="switchCardPhoto('q-real-photo', '${w.id}')" class="btn-3d px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-extrabold text-xs">🔄 换一张实景图</button>` : ''}
+              <div class="flex flex-wrap items-center gap-1.5">
+                ${isPhoto ? `<button onclick="switchQuestionArtStyle('q-cartoon-box', '${w.id}')" class="btn-3d px-3 py-1.5 rounded-xl bg-pink-50 text-pink-700 border border-pink-200 font-extrabold text-xs">🎨 换个卡通画风</button>` : ''}
                 <button onclick="toggleKeyboardFallback()" class="btn-3d px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 font-extrabold text-xs">⌨️ 无麦键盘输入</button>
               </div>
             </div>
 
             <div class="flex flex-col items-center my-2">
               ${isPhoto ? `
-                <div class="w-full max-w-md aspect-[3/2] rounded-3xl overflow-hidden bg-slate-100 border-2 border-slate-200 shadow-inner mb-3 relative">
-                  <img id="q-real-photo" alt="${w.en}" class="w-full h-full object-cover photo-skeleton" />
+                <div id="q-cartoon-box" class="w-full max-w-md aspect-[3/2] rounded-3xl overflow-hidden border-2 border-amber-200 shadow-inner mb-3 relative">
+                  ${CartoonArtEngine.renderCard(w, { antiSpoiler: true })}
                 </div>
-                <button onclick="speakText('${safeEn}')" class="btn-3d px-4 py-1.5 rounded-xl bg-sky-50 text-sky-700 font-bold text-xs border border-sky-200 mb-1">💡 听发音提示</button>
+                <div class="flex flex-wrap items-center justify-center gap-2 mb-1.5">
+                  <button onclick="speakText('${safeEn}')" class="btn-3d px-3.5 py-1.5 rounded-xl bg-sky-50 text-sky-700 font-bold text-xs border border-sky-200">🔊 听发音提示</button>
+                  <button onclick="revealPhotoHint('letter', '${w.id}')" class="btn-3d px-3.5 py-1.5 rounded-xl bg-amber-50 text-amber-800 font-bold text-xs border border-amber-200">💡 首字母提示</button>
+                  <button onclick="revealPhotoHint('zh', '${w.id}')" class="btn-3d px-3.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-xs border border-emerald-200">🈯 中文提示</button>
+                </div>
+                <div id="photo-hint-box" class="hidden px-4 py-1 rounded-full bg-slate-100 text-slate-700 font-extrabold text-xs mb-1"></div>
               ` : `
                 <div class="text-4xl sm:text-6xl font-black text-slate-800 mt-3 mb-1">${expectLang === 'zh-CN' ? w.en : w.zh}</div>
                 ${expectLang === 'zh-CN' && w.phonetic ? `<div class="text-sm font-semibold text-slate-400 mb-2">${w.phonetic}</div>` : ''}
@@ -1367,8 +1852,20 @@
             </div>
           </div>`;
 
-        if (isPhoto) bindRealPhoto('q-real-photo', w);
         if (q.type === 'voice_en_zh') setTimeout(() => speakText(w.en), 220);
+      }
+    }
+
+    function revealPhotoHint(kind, wordId) {
+      const w = app.wordMap.get(wordId);
+      const box = document.getElementById('photo-hint-box');
+      if (!w || !box) return;
+      box.classList.remove('hidden');
+      if (kind === 'letter') {
+        const masked = w.en[0] + ' ' + '_ '.repeat(Math.max(1, w.en.length - 1)).trim();
+        box.textContent = `💡 首字母提示：${masked}（共 ${w.en.length} 个字母）`;
+      } else {
+        box.textContent = `🈯 中文提示：${w.zh}`;
       }
     }
 
@@ -1644,7 +2141,7 @@
           <div class="flex flex-col items-center justify-center my-1.5">
             ${isPhoto ? `
               <div class="w-40 sm:w-52 aspect-[3/2] rounded-2xl overflow-hidden bg-white border-2 border-white shadow">
-                <img id="${imgId}" alt="${q.w.en}" class="w-full h-full object-cover photo-skeleton" />
+                ${CartoonArtEngine.renderCard(q.w, { antiSpoiler: true, compact: true })}
               </div>
             ` : `<div class="text-2xl sm:text-4xl font-black text-slate-800">${isEnPrompt ? q.w.en : q.w.zh}</div>`}
           </div>
@@ -1680,10 +2177,7 @@
           ${renderPkPanel('p2', q, false)}
         </div>`;
 
-      if (q.qMode === 'photo_en') {
-        bindRealPhoto('pk-img-p1', q.w);
-        bindRealPhoto('pk-img-p2', q.w);
-      } else if (q.qMode === 'en_zh') {
+      if (q.qMode === 'en_zh') {
         setTimeout(() => speakText(q.w.en), 150);
       }
     }
@@ -1906,6 +2400,8 @@
     let albumLevel = 'aa', albumLimit = 20;
 
     function openAlbumView() {
+      const lbl = document.getElementById('album-style-name');
+      if (lbl) lbl.textContent = CARTOON_STYLES[(app.meta.artStyle || 0) % CARTOON_STYLES.length].name;
       renderAlbumTabs();
       renderAlbumGrid();
       switchView('view-album');
@@ -1936,9 +2432,9 @@
       grid.innerHTML = slice.map((w, i) => `
         <div class="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm flex flex-col">
           <div class="aspect-[4/3] bg-slate-100 relative overflow-hidden">
-            <img id="alb-img-${i}" alt="${w.en}" class="w-full h-full object-cover photo-skeleton" />
-            ${w.mastered ? `<span class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black">已掌握</span>` : ''}
-            <button onclick="switchCardPhoto('alb-img-${i}', '${w.id}')" class="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-black/45 text-white text-xs flex items-center justify-center" title="换一张实景图">🔄</button>
+            ${CartoonArtEngine.renderCard(w, { antiSpoiler: false, compact: true })}
+            ${w.mastered ? `<span class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black shadow-sm">已掌握</span>` : ''}
+            <button onclick="cycleGlobalArtStyle(true)" class="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-black/45 text-white text-xs flex items-center justify-center" title="切换卡通画风">🎨</button>
           </div>
           <div class="p-3 flex items-center justify-between gap-2">
             <div class="truncate">
@@ -1950,7 +2446,6 @@
           </div>
         </div>`).join('');
 
-      slice.forEach((w, i) => bindRealPhoto(`alb-img-${i}`, w));
       document.getElementById('album-more').innerHTML = list.length > albumLimit
         ? `<button onclick="albumLimit+=20; renderAlbumGrid();" class="btn-3d min-h-[48px] px-7 rounded-2xl bg-sky-100 text-sky-700 font-extrabold text-sm">加载更多 (${list.length - albumLimit} 词)</button>`
         : '';
@@ -1975,6 +2470,7 @@
     }
 
     function openImportModal() {
+      syncImageModeRadios();
       renderImportMatrix();
       openModal('modal-import');
     }
